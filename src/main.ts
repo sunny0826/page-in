@@ -275,7 +275,7 @@ async function guardUnsaved(): Promise<boolean> {
   return new Promise(resolve => {
     showDialog(t('unsaved'), t('unsavedBody'), [
       { label: t('cancel'), icon: 'close', action: () => { closeDialog(); resolve(false); } },
-      { label: t('discard'), icon: 'trash', action: () => { closeDialog(); resolve(true); } },
+      { label: t('discard'), icon: 'trash', danger: true, action: () => { closeDialog(); resolve(true); } },
       { label: t('exportContinue'), icon: 'export', primary: true, action: () => { closeDialog(); void exportFile().then(resolve).catch(error => { notice(error); resolve(false); }); } },
     ], () => resolve(false));
   });

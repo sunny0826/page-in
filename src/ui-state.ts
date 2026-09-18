@@ -3,6 +3,7 @@ export type DialogAction = {
   icon?: "close" | "trash" | "export" | "check" | "eye" | "file" | "project";
   action: () => void;
   primary?: boolean;
+  danger?: boolean;
 };
 export type DialogState = {
   title: string;

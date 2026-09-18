@@ -121,20 +121,22 @@ function ToolButton({
   disabled,
   shortcut,
   variant = "",
+  danger = false,
 }: {
   label: string;
   icon: IconName;
   onClick: () => void;
   disabled?: boolean;
   shortcut?: string;
-  variant?: string;
+  variant?: "primary" | "secondary" | "";
+  danger?: boolean;
 }) {
   return (
     <Tooltip.Root>
       <Tooltip.Trigger
         render={
           <Button
-            className={`button icon-button ${variant}`}
+            className={`button icon-button ${variant}${danger ? " danger" : ""}`}
             title={label}
             aria-label={label}
             disabled={disabled}
@@ -535,6 +537,7 @@ function Shell({ actions }: { actions: ShellActions }) {
                   label={action.label}
                   icon={action.icon ?? "check"}
                   variant={action.primary ? "primary" : "secondary"}
+                  danger={action.danger}
                   onClick={action.action}
                 />
               ))}
