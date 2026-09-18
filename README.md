@@ -16,9 +16,13 @@
 
 前往 [GitHub Releases](https://github.com/sunny0826/page-in/releases) 查看发布包。
 
-当前提供 macOS 13 及以上版本的 Apple Silicon 构建。打开 DMG，将 PageIn 拖入 Applications；也可解压 ZIP 后运行应用。无需安装 Node.js 或 Rust。
+0.0.1 为预发布版本，无需安装 Node.js 或 Rust：
 
-当前安装包尚未进行 Developer ID 签名和 Apple 公证。
+- **macOS 13+ / Apple Silicon**：打开 DMG，将 PageIn 拖入 Applications；也可解压 ZIP 后运行。
+- **Windows x64**：运行 `.exe` 安装程序；缺少 WebView2 时安装程序会联网下载。
+- **Linux x64 / Omarchy**：下载 AppImage，使用 `chmod +x` 赋予执行权限后运行。另提供适用于 Debian/Ubuntu 的 `.deb`。
+
+Windows 和 Linux 包尚未完成对应系统的安装与功能实测。macOS 包尚未进行 Developer ID 签名和 Apple 公证，Windows 包未做代码签名。安装步骤与校验文件见 [0.0.1 发布说明](docs/releases/0.0.1.md)。
 
 ## 使用
 
