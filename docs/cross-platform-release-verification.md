@@ -2,7 +2,7 @@
 
 日期：2026-09-18。依据 [ADR-007](ADR-007-cross-platform-prerelease.md) 和[发布契约](cross-platform-release-contract.md)。
 
-本文件记录旧预发布产物，其摘要仅适用于旧包。当前源码正式重发依据 [ADR-008](ADR-008-v0.0.1-formal-release.md)，不得将下列旧包摘要当作重发包校验值。
+本文件记录旧预发布产物，其摘要仅适用于旧包。当前源码正式重发依据 [ADR-008](ADR-008-v0.0.1-formal-release.md)，结果见[正式发布验收](formal-release-verification.md)，不得将下列旧包摘要当作重发包校验值。
 
 ## 结果
 

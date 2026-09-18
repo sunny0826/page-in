@@ -79,4 +79,4 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 - 项目设计记忆：`8af00702-1ed3-4754-bad5-bf67058df626`（2026-09-18 的 UI 约束与 token 结构）；导入模型记忆：`6120a6b2-817b-49e5-9c01-3781f1615f0f`。
 - mise 长期约束记忆：`45b1eedf-9af9-41c3-859a-b6acfbb5b0d2`；RTK 规则继承用户级 `AGENTS.md`。
 - 当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
-- 发布证据见 [跨平台验收记录](docs/cross-platform-release-verification.md)。后续验证或用户决策改变时更新相关文档，不重复固化已过期结论。
+- 当前正式重发证据见 [正式发布验收](docs/formal-release-verification.md)；[跨平台预发布验收](docs/cross-platform-release-verification.md) 保留历史记录。后续验证或用户决策改变时更新相关文档，不重复固化已过期结论。
