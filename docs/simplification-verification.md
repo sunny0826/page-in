@@ -49,6 +49,11 @@ The sample document was edited with physical key events, not a paste-only test.
 - Fullscreen entry, read-only undo guard and Escape restoring editing: passed.
 - Settings/diagnostics and unsaved-quit dialog focus/cancellation: passed.
 - Icon-only actions and warm-red discard styling: visually checked.
+- Final build project fixture: local CSS loads, original scripts remain disabled,
+  keyboard slide navigation and entering fullscreen from page two work. Editing
+  the first title and exporting the project preserves BOM, CRLF, script bytes,
+  CSS/binary resource bytes and an empty directory. An export inside the source
+  project is rejected without creating its destination.
 
 **Still unverified:** native Chinese IME candidate/composition flow. The attempted
 input-source shortcut produced Latin text, and querying the system input menu
@@ -61,3 +66,12 @@ The shared notice/inventory helpers have automated byte/hash and license tests.
 Platform entry-point guards, output names, source-SHA validation, no-overwrite
 behavior and signature metadata are retained. Existing published tags and release
 assets are outside this PR's changes.
+
+- Source tested: `0bf99a3cf08901bec88bacd92e850c327d815df8` (subsequent changes
+  only record verification evidence).
+- macOS: the complete packaging script produced DMG/ZIP, installed-dependency
+  notices, installation notes and manifest. Ad-hoc signing verification, DMG
+  verification and all six SHA-256 entries passed. These are local test packages.
+- Windows NSIS and Linux AppImage/DEB: both build/check/package jobs passed in
+  [run 35350534957](https://github.com/sunny0826/page-in/actions/runs/35350534957).
+  This establishes CI packaging, not desktop installation/interaction acceptance.
