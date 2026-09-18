@@ -1,0 +1,32 @@
+{
+  "name": "pagein",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
+    "build": "npm run version:check && tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "check": "npm run version:check && npm run typecheck && npm test && cargo test --manifest-path src-tauri/Cargo.toml",
+    "tauri": "tauri",
+    "version:check": "node scripts/check-version.mjs",
+    "release:macos": "npm run check && npm run tauri -- build --bundles app && node scripts/release-macos.mjs"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.8.0",
+    "@tauri-apps/api": "2.11.1",
+    "parse5": "8.0.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4",
+    "@types/node": "24.10.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.0"
+  },
+  "packageManager": "npm@11.6.2"
+}

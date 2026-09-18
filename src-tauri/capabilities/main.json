@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Only the trusted single-window editor can call document-scoped commands.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-open-document", "allow-open-project", "allow-open-sample", "allow-register-manifest",
+    "allow-commit-edit", "allow-undo-edit", "allow-redo-edit", "allow-export-document",
+    "allow-close-application", "allow-frontend-ready",
+    "core:event:allow-listen", "core:event:allow-unlisten",
+    "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize"
+  ]
+}

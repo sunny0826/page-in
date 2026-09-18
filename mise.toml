@@ -1,0 +1,15 @@
+[tools]
+node = "24.12.0"
+rust = "1.92.0"
+
+[tasks.check]
+run = "npm run check"
+
+[tasks.dev]
+run = "npm run tauri dev"
+
+[tasks.build]
+run = "npm run tauri build -- --bundles app"
+
+[tasks.release-macos]
+run = "npm run release:macos"
