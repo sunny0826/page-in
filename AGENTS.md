@@ -36,7 +36,7 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 ## 架构与执行边界
 
 - 使用 Tauri 2 + Rust + 系统 WebView；React / Base UI 负责应用外壳。保持单窗口、一个原生 WebView，不引入 Electron/CEF、Node 运行时或常驻本地服务。开发期 Vite 服务不属于发布运行时。
-- `src/shell.tsx` 通过 `src/ui-state.ts` 的状态快照和动作回调连接引擎；`src/main.ts` 负责编辑事务、iframe 映射和 IPC 队列。React 不接管用户文档 DOM，不直接操作原生文件。
+- `src/shell.tsx` 通过 `src/ui-state.ts` 的状态快照和动作回调连接引擎；`src/main.ts` 协调会话和 IPC 队列，`src/input-surface.ts` 管理输入事务，`src/document-frame.ts` 负责 iframe 解析与映射，`src/keyboard.ts` 解析快捷键意图。React 不接管用户文档 DOM，不直接操作原生文件。
 - 用户文档是静态、不可信预览。保留 `sandbox="allow-same-origin"`，不得增加 `allow-scripts` 或执行原页面 JavaScript，也不以扩大 Tauri capability 权限解决兼容问题。放映动效仅由可信父页面的内置适配器与原有 CSS 提供，编辑时停止，并响应减少动态效果设置。导出保留原始脚本，预览策略不改原文件。
 - 资源仅限用户授权目录中的允许类型，规范化路径并检查越界；不提供任意路径读取、通用代理或默认远程资源加载。
 - 原位输入使用可信父页面的命中层和输入层；复制计算样式时必须排除 `-webkit-user-modify`，防止 WKWebView 输入变为只读。临时输入层、分页样式和包装标记不得进入导出。
@@ -79,5 +79,5 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 
 - 项目设计记忆：`8af00702-1ed3-4754-bad5-bf67058df626`（2026-09-18 的 UI 约束与 token 结构）；导入模型记忆：`6120a6b2-817b-49e5-9c01-3781f1615f0f`。
 - mise 长期约束记忆：`45b1eedf-9af9-41c3-859a-b6acfbb5b0d2`；RTK 规则继承用户级 `AGENTS.md`。
-- 当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
+- 代码模块职责与共享操作见 [ADR-010](docs/ADR-010-codebase-simplification.md)。当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
 - 当前正式重发证据见 [正式发布验收](docs/formal-release-verification.md)；[跨平台预发布验收](docs/cross-platform-release-verification.md) 保留历史记录。后续验证或用户决策改变时更新相关文档，不重复固化已过期结论。

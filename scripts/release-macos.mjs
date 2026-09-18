@@ -1,12 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { thirdPartyNotices, writeInventory, readJSON } from "./release-common.mjs";
 import {
   cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
-  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -28,8 +26,8 @@ const run = (command, args = []) =>
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
-const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-const config = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
+const pkg = readJSON("package.json");
+const config = readJSON("src-tauri/tauri.conf.json");
 const sourceCommit = run("git", ["rev-parse", "HEAD"]).trim();
 assert.match(sourceCommit, /^[0-9a-f]{40}$/);
 assert.equal(
@@ -64,66 +62,9 @@ assert.equal(
   "arm64",
 );
 
-// Include license texts shipped with installed components, including build tools
-// for a conservative inventory. No user documents enter the release stage.
-const notices = [
-  "PageIn third-party component notices",
-  "Generated from installed npm and Cargo packages. Includes build-time dependencies.",
-  "",
-];
-function notice(name, version, license, directory, extraFile) {
-  notices.push(
-    `\n${"=".repeat(72)}\n${name} ${version}\nDeclared license: ${license ?? "See package sources"}\n`,
-  );
-  const files = readdirSync(directory, { withFileTypes: true })
-    .filter(
-      (e) =>
-        e.isFile() && /^(licen[cs]e|copying|notice)(?:[._-]|$)/i.test(e.name),
-    )
-    .map((e) => e.name);
-  if (
-    extraFile &&
-    existsSync(path.join(directory, extraFile)) &&
-    !files.includes(extraFile)
-  )
-    files.push(extraFile);
-  for (const file of files.sort())
-    notices.push(
-      `--- ${file} ---\n${readFileSync(path.join(directory, file), "utf8")}`,
-    );
-}
-const npmLock = JSON.parse(readFileSync("package-lock.json", "utf8"));
-for (const [directory, info] of Object.entries(npmLock.packages)) {
-  if (!directory || !existsSync(directory)) continue;
-  const meta = JSON.parse(
-    readFileSync(path.join(directory, "package.json"), "utf8"),
-  );
-  notice(meta.name, info.version, info.license ?? meta.license, directory);
-}
-const cargo = JSON.parse(
-  run("cargo", [
-    "metadata",
-    "--manifest-path",
-    "src-tauri/Cargo.toml",
-    "--format-version",
-    "1",
-    "--locked",
-    "--filter-platform",
-    "aarch64-apple-darwin",
-  ]),
-);
-for (const info of cargo.packages
-  .filter((p) => p.source)
-  .sort((a, b) => a.name.localeCompare(b.name))) {
-  notice(
-    info.name,
-    info.version,
-    info.license,
-    path.dirname(info.manifest_path),
-    info.license_file,
-  );
-}
-const licenseText = notices.join("\n");
+const licenseText = thirdPartyNotices(run, "aarch64-apple-darwin", [
+  "Generated from installed npm and Cargo packages. Includes build-time dependencies.", "",
+]);
 const stage = mkdtempSync(path.join(root, ".release-stage-"));
 mkdirSync(output, { recursive: true });
 try {
@@ -174,48 +115,11 @@ try {
     dmg,
   ]);
   run("/usr/bin/hdiutil", ["verify", dmg]);
-  const files = readdirSync(output)
-    .sort()
-    .map((name) => {
-      const bytes = readFileSync(path.join(output, name));
-      return {
-        name,
-        bytes: bytes.length,
-        sha256: createHash("sha256").update(bytes).digest("hex"),
-      };
-    });
-  writeFileSync(
-    path.join(output, "manifest.json"),
-    JSON.stringify(
-      {
-        product: "PageIn",
-        version: pkg.version,
-        identifier: config.identifier,
-        platform: "macOS",
-        architecture: "arm64",
-        sourceTag: `v${pkg.version}`,
-        sourceCommit,
-        runtimeVerification:
-          "Package integrity checked; desktop runtime verification is recorded separately",
-        minimumSystemVersion: "13.0",
-        signing: "ad-hoc",
-        notarized: false,
-        builtAt: new Date().toISOString(),
-        files,
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-  const manifest = readFileSync(path.join(output, "manifest.json"));
-  files.push({
-    name: "manifest.json",
-    sha256: createHash("sha256").update(manifest).digest("hex"),
+  const files = writeInventory(output, {
+    version: pkg.version, identifier: config.identifier, platform: "macOS", architecture: "arm64",
+    sourceTag: `v${pkg.version}`, sourceCommit, minimumSystemVersion: "13.0", signing: "ad-hoc", notarized: false,
+    runtimeVerification: "Package integrity checked; desktop runtime verification is recorded separately",
   });
-  writeFileSync(
-    path.join(output, "SHA256SUMS"),
-    files.map((f) => `${f.sha256}  ${f.name}`).join("\n") + "\n",
-  );
   console.log(`Prepared PageIn ${pkg.version}: ${output}`);
   console.log(files.map((f) => f.name).join("\n"));
 } catch (error) {

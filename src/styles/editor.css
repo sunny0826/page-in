@@ -1,0 +1,119 @@
+#page {
+  position: fixed;
+  inset: var(--titlebar-height) 0 0;
+  display: block;
+  border: 0;
+  width: 100%;
+  height: calc(100dvh - var(--titlebar-height));
+}
+#input-surface { position: fixed; inset: var(--titlebar-height) 0 0; z-index: 10; background: transparent; }
+.presentation-background {
+  position: fixed;
+  z-index: 5;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.92;
+}
+@media (prefers-reduced-motion: reduce) { .presentation-background { display: none; } }
+.titlebar {
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--titlebar-height);
+  /* Balance the bottom border so controls share the native lights' 16px centre. */
+  padding: 1px 6px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.macos .titlebar { padding-left: 78px; }
+.titlebar > .editor-toolbar {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.titlebar-drag-region {
+  align-self: stretch;
+  flex: 1;
+  min-width: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.slide-navigation { bottom: 10px; }
+.slide-count {
+  min-width: 48px;
+  text-align: center;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.slideshow { --titlebar-height: 0px; }
+.presentation-controls.idle:not(:hover):not(:focus-within) { opacity: 0; pointer-events: none; }
+.presentation-hint { padding: 0 6px; color: var(--caption); font-size: 10px; }
+.editor-toolbar {
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-veil);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(18px);
+}
+.document-status { gap: 6px; padding: 0 4px; min-width: 0; }
+.document-format {
+  flex: none;
+  margin: 0 3px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.document-status > div { min-width: 0; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.status-dot.dirty { background: var(--warn); }
+.status-dot.pending { background: var(--busy); }
+.filename {
+  display: block;
+  max-width: 156px;
+  font-size: 11px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.save-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.toolbar-separator { width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
+.editor-toolbar .button { width: 24px; height: 24px; min-height: 24px; padding: 3px; border-radius: 5px; }
+.editor-toolbar .icon { width: 16px; height: 16px; }
+.editing-hint {
+  bottom: 20px;
+  gap: 17px;
+  padding: 10px 15px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-veil);
+  color: var(--caption);
+  box-shadow: var(--shadow-soft);
+  font-size: 10px;
+  pointer-events: none;
+}
+.hint-intro, .hint-key { display: flex; align-items: center; gap: 6px; }
+.hint-intro { color: var(--sage-ink); }
+.hint-intro .icon { width: 13px; height: 13px; }
+kbd {
+  font: 9px/1.4 -apple-system,
+    sans-serif;
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--caption);
+  box-shadow: 0 1px var(--line-soft);
+}

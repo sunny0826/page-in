@@ -1,0 +1,145 @@
+.tooltip-positioner { z-index: 70; }
+.tooltip {
+  gap: 12px;
+  padding: 6px 9px;
+  color: var(--tooltip-ink);
+  background: var(--tooltip-bg);
+  border-radius: 6px;
+  font-size: 10px;
+  box-shadow: 0 3px 10px #21351522;
+  transition: opacity 100ms;
+}
+.tooltip kbd {
+  background: var(--tooltip-key-bg);
+  color: var(--tooltip-key-ink);
+  border-color: var(--tooltip-key-line);
+  box-shadow: none;
+}
+.tooltip[data-starting-style], .tooltip[data-ending-style] { opacity: 0; }
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--backdrop);
+  backdrop-filter: blur(4px);
+  transition: opacity 160ms;
+}
+.dialog-popup {
+  --pagein-scrollbar-track: var(--panel);
+  --pagein-scrollbar-thumb: #8c968980;
+  --pagein-scrollbar-hover: #687461b3;
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 51;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 470px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-dialog);
+  padding: 25px;
+  outline: none;
+  transition: opacity 160ms,
+    scale 160ms;
+}
+.dialog-backdrop[data-starting-style], .dialog-backdrop[data-ending-style] { opacity: 0; }
+.dialog-popup[data-starting-style], .dialog-popup[data-ending-style] { opacity: 0; scale: 0.97; }
+.dialog-header { margin-bottom: 19px; }
+.dialog-symbol {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+}
+.dialog-header .icon-button { color: var(--caption); }
+.dialog-title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.4;
+  font-weight: 580;
+  letter-spacing: -0.4px;
+  text-wrap: balance;
+}
+.dialog-body {
+  margin: 14px 0 25px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+.welcome-actions .icon-button { width: 42px; height: 42px; }
+.settings-page { width: 550px; }
+.settings-section { padding: 22px 0 0; margin-top: 22px; border-top: 1px solid var(--line); }
+.settings-section h2,
+.language-field legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+}
+.language-field { border: 0; margin: 0; padding: 0; min-width: 0; }
+.language-field p { color: var(--muted); font-size: 12px; margin: 8px 0 15px; }
+.language-options { display: flex; gap: 12px; }
+.language-option {
+  gap: 10px;
+  flex: 1;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 160ms,
+    border-color 160ms;
+}
+.language-option:hover { background: var(--soft); }
+.language-option:has(:checked) { background: var(--soft); border-color: var(--focus); }
+.language-option:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
+.language-option input { accent-color: var(--green); }
+.diagnostics-list { margin: 12px 0 0; font-size: 12px; }
+.diagnostics-list > div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+}
+.diagnostics-list dt { color: var(--muted); }
+.diagnostics-list dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.diagnostic-engine dd { font-size: 10px; color: var(--caption); line-height: 1.7; }
+.notice {
+  z-index: 60;
+  bottom: 78px;
+  gap: 10px;
+  width: max-content;
+  max-width: min(620px, calc(100vw - 32px));
+  padding: 8px 9px 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+  box-shadow: 0 8px 30px #25371e22;
+  font-size: 12px;
+  color: var(--sage-ink);
+  animation: notice-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.notice > span { min-width: 0; overflow-wrap: anywhere; }
+.notice .icon-button { width: 28px; height: 28px; min-height: 28px; color: var(--caption); }
+body.busy { cursor: progress; }

@@ -29,3 +29,5 @@ export interface ParsedDocument {
   entries: TextEntry[];
   warnings: string[];
 }
+
+export const emptySession = (): SessionView => ({ revision: 0, texts: {}, canUndo: false, canRedo: false, dirty: false });

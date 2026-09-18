@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "npm run version:check && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --experimental-strip-types --test tests/*.test.*",
     "check": "npm run version:check && npm run typecheck && npm test && cargo test --manifest-path src-tauri/Cargo.toml",
     "tauri": "tauri",
     "version:check": "node scripts/check-version.mjs",
