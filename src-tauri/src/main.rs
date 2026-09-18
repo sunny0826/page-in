@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod document;
+mod open_requests;
 mod project;
 mod resources;
 
@@ -22,6 +23,7 @@ type Shared = Arc<Mutex<Option<Session>>>;
 struct AppState {
     session: Shared,
     staged: Mutex<Option<Session>>,
+    open_requests: Mutex<open_requests::OpenRequests>,
     started: Instant,
     approved_exit: AtomicBool,
 }
@@ -73,29 +75,57 @@ async fn open_document(
     .await
     .map_err(|e| e.to_string())?;
     let Some(path) = path else { return Ok(None) };
-    let path = path
-        .into_path()
-        .map_err(|e| e.to_string())?
-        .canonicalize()
-        .map_err(|e| e.to_string())?;
-    let metadata = fs::metadata(&path).map_err(|e| e.to_string())?;
-    if !metadata.is_file() || metadata.len() > document::MAX_SOURCE as u64 {
-        return Err("只打开不超过 5 MiB 的 HTML 文件".into());
+    let path = path.into_path().map_err(|e| e.to_string())?;
+    publish(&state, open_requests::read_html(&path)?).map(Some)
+}
+// Paths never cross the IPC boundary: only IDs issued by the native event queue.
+#[tauri::command]
+fn pending_open_request(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state
+        .open_requests
+        .lock()
+        .map_err(|_| "state unavailable")?
+        .pending())
+}
+#[tauri::command]
+fn dismiss_open_request(
+    state: tauri::State<'_, AppState>,
+    request_id: String,
+) -> Result<(), String> {
+    state
+        .open_requests
+        .lock()
+        .map_err(|_| "state unavailable")?
+        .dismiss(&request_id);
+    Ok(())
+}
+#[tauri::command]
+fn open_requested_document(
+    state: tauri::State<'_, AppState>,
+    request_id: String,
+) -> Result<Opened, String> {
+    let path = state
+        .open_requests
+        .lock()
+        .map_err(|_| "state unavailable")?
+        .path(&request_id)?;
+    publish(&state, open_requests::read_html(&path)?)
+}
+fn queue_open(app: &tauri::AppHandle, paths: Vec<PathBuf>) {
+    let state = app.state::<AppState>();
+    let result = state
+        .open_requests
+        .lock()
+        .map_err(|_| "state unavailable".to_string())
+        .and_then(|mut requests| requests.push(paths));
+    if let Err(error) = result {
+        let _ = app.emit("open-request-error", error);
     }
-    if !matches!(
-        path.extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("")
-            .to_lowercase()
-            .as_str(),
-        "html" | "htm"
-    ) {
-        return Err("请选择 HTML 文件".into());
+    let _ = app.emit("open-requested", ());
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.set_focus();
     }
-    let source = document::valid_source(fs::read(&path).map_err(|e| e.to_string())?)?;
-    let filename = path.file_name().unwrap().to_string_lossy().into_owned();
-    let root = path.parent().map(PathBuf::from);
-    publish(&state, Session::new(source, Some(path), root, filename)).map(Some)
 }
 #[tauri::command]
 async fn open_project(
@@ -327,13 +357,24 @@ fn frontend_ready(state: tauri::State<'_, AppState>, user_agent: String) -> f64 
 fn main() {
     let shared: Shared = Arc::new(Mutex::new(None));
     let resources = shared.clone();
+    let mut requests = open_requests::OpenRequests::default();
+    if let Ok(cwd) = std::env::current_dir() {
+        let _ = requests.push(open_requests::argument_paths(std::env::args(), &cwd));
+    }
     tauri::Builder::default()
         .manage(AppState {
             session: shared,
             staged: Mutex::new(None),
+            open_requests: Mutex::new(requests),
             started: Instant::now(),
             approved_exit: AtomicBool::new(false),
         })
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            queue_open(
+                app,
+                open_requests::argument_paths(args, std::path::Path::new(&cwd)),
+            );
+        }))
         .plugin(tauri_plugin_dialog::init())
         .register_uri_scheme_protocol("pagein-resource", move |_ctx, request| {
             let result = (|| -> Result<(Vec<u8>, &str), String> {
@@ -435,6 +476,12 @@ fn main() {
             let window = builder.build()?;
             let handle = window.clone();
             window.on_window_event(move |event| {
+                // WebviewWindow drag/drop is dispatched as WindowEvent by Tauri/Wry.
+                if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) =
+                    event
+                {
+                    queue_open(handle.app_handle(), paths.clone());
+                }
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
                     let _ = handle.emit("close-requested", ());
@@ -444,6 +491,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             open_document,
+            pending_open_request,
+            open_requested_document,
+            dismiss_open_request,
             open_project,
             open_sample,
             register_manifest,
@@ -457,6 +507,15 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error building PageIn")
         .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { urls } = &event {
+                queue_open(
+                    app,
+                    urls.iter()
+                        .filter_map(|url| url.to_file_path().ok())
+                        .collect(),
+                );
+            }
             // Menu Quit / Cmd+Q must take the same unsaved-change path as closing.
             // Menu Quit can also use code Some(0); use an explicit confirmation flag.
             if let tauri::RunEvent::ExitRequested { api, .. } = event {

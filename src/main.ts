@@ -1,4 +1,5 @@
 import './style.css';
+import { createOpenRequestPump } from './open-request-pump.ts';
 import './scrollbars.css';
 import { stylePageScrollbars } from './page-scrollbars.ts';
 import { preparePresentation } from './presentation.ts';
@@ -9,7 +10,7 @@ import { listen } from '@tauri-apps/api/event';
 import type { OpenedDocument, ParsedDocument, SessionView, TextEntry } from './contracts.ts';
 import { getLocale, subscribeLocale, t, localizeError } from './i18n.ts';
 import { mountShell } from './shell.tsx';
-import { closeDialog, getUI, showDialog, updateUI } from './ui-state.ts';
+import { closeDialog, getUI, showDialog, updateUI, subscribeUI } from './ui-state.ts';
 
 document.documentElement.classList.toggle('macos', /Mac/.test(navigator.platform));
 
@@ -30,6 +31,8 @@ let editing = false;
 let active: { element: HTMLElement; input: HTMLDivElement; entry: TextEntry; before: string; attributes: Record<string,string|null> } | null = null;
 let pipeline = Promise.resolve();
 let pending = 0;
+let switchingDocument = false;
+let composing = false;
 let noticeTimer = 0;
 let parseMs = 0;
 let startupMs = 0;
@@ -103,8 +106,8 @@ function notice(message: unknown) {
   noticeTimer = window.setTimeout(() => updateUI({ notice: null }), 6000);
 }
 function update() {
-  updateUI({ busy: pending > 0, dirty: view.dirty, canUndo: view.canUndo, canRedo: view.canRedo, activeInput: !!active });
-  document.body.classList.toggle('busy', pending > 0);
+  updateUI({ busy: pending > 0 || switchingDocument, dirty: view.dirty, canUndo: view.canUndo, canRedo: view.canRedo, activeInput: !!active });
+  document.body.classList.toggle('busy', pending > 0 || switchingDocument);
 }
 function enqueue<T>(fn: () => Promise<T>): Promise<T> {
   pending++; update();
@@ -145,7 +148,7 @@ function finish(cancel = false): Promise<void> {
   });
 }
 async function begin(element: HTMLElement) {
-  if (!editing || active?.element === element) return;
+  if (!editing || switchingDocument || active?.element === element) return;
   await finish();
   const entry = elements.get(element);
   if (!entry || !opened) return;
@@ -266,52 +269,66 @@ document.addEventListener("paste", event => {
   active.element.textContent = active.input.textContent;
   positionInput();
 });
-document.addEventListener("drop", event => { if (editing) event.preventDefault(); });
-async function open(sample = false, project = false) {
-  if (getUI().presenting) await exitSlideshow();
-  await finish();
-  if (!await guardUnsaved()) return;
-  await enqueue(async () => {
-    const next = await invoke<OpenedDocument | null>(sample ? 'open_sample' : project ? 'open_project' : 'open_document', { locale: getLocale() });
-    if (!next) return;
-    let activated = false;
-    try {
-      const result = await parseInWorker(next.source, next.resourceBase);
-      const registered = await invoke<SessionView>('register_manifest', { sessionId: next.sessionId, entries: result.entries });
-      activated = true;
-      presentation?.dispose();
-      opened = next; parsed = result;
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(t('renderTimeout'))), 10000);
-        frame.onload = () => {
-          try {
-            const doc = frame.contentDocument;
-            if (!doc) throw new Error(t('frameUnavailable'));
-            mapElements(doc, result); sync(registered);
-            clearTimeout(timer); resolve();
-          } catch (error) { clearTimeout(timer); reject(error); }
-        };
-        frame.srcdoc = result.html;
-      });
-      frame.hidden = false;
-      // Hidden iframe documents can return empty computed styles in WebKit.
-      stylePageScrollbars(frame.contentDocument!);
-      presentation = preparePresentation(frame.contentDocument!);
-      frame.contentDocument!.addEventListener('keydown', keyboard);
-      frame.contentDocument!.addEventListener('wheel', slideWheel, { passive: false });
-      frame.contentDocument!.addEventListener('pointermove', revealPresentationControls);
-      updateUI({ filename: next.filename, documentFormat: result.format, project: next.project, slideIndex: 0, slideCount: presentation?.slides.length ?? 0 }); setMode(false);
-      if (result.warnings.length || mapFailures) showDialog(t('support'), [...result.warnings.map(localizeError), ...(mapFailures ? [t('mapping', { count: mapFailures })] : [])].join('\n'), [{ label: t('preview'), icon: 'eye', action: closeDialog }]);
-    } catch (error) {
-      if (!activated) throw error; // Reading or parsing failure keeps the active document intact.
-      // The native session changed; never keep an old page attached to its resource token.
-      active?.input.remove(); surface.hidden = true; opened = null; parsed = null; elements.clear(); active = null; frame.srcdoc = ''; frame.hidden = true;
-      presentation?.dispose(); presentation = null;
-      editing = false; updateUI({ filename: null, documentFormat: null, project: false, slideCount: 0, slideIndex: 0, editing: false });
-      view = { revision: 0, texts: {}, canUndo: false, canRedo: false, dirty: false };
-      throw error;
-    }
-  });
+// Native drop owns file access; never let the browser navigate to a dropped file.
+function preventFileDrop(event: DragEvent) {
+  if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+}
+document.addEventListener('dragover', preventFileDrop);
+document.addEventListener('drop', event => {
+  if (editing) event.preventDefault();
+  preventFileDrop(event);
+});
+async function open(sample = false, project = false, requestId?: string) {
+  if (switchingDocument) return;
+  switchingDocument = true; update();
+  try {
+    if (getUI().presenting) await exitSlideshow();
+    await finish();
+    if (!await guardUnsaved()) return;
+    await enqueue(async () => {
+      const next = await invoke<OpenedDocument | null>(requestId ? 'open_requested_document' : sample ? 'open_sample' : project ? 'open_project' : 'open_document', { locale: getLocale(), requestId });
+      if (!next) return;
+      let activated = false;
+      try {
+        const result = await parseInWorker(next.source, next.resourceBase);
+        const registered = await invoke<SessionView>('register_manifest', { sessionId: next.sessionId, entries: result.entries });
+        activated = true;
+        presentation?.dispose();
+        opened = next; parsed = result;
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(t('renderTimeout'))), 10000);
+          frame.onload = () => {
+            try {
+              const doc = frame.contentDocument;
+              if (!doc) throw new Error(t('frameUnavailable'));
+              mapElements(doc, result); sync(registered);
+              clearTimeout(timer); resolve();
+            } catch (error) { clearTimeout(timer); reject(error); }
+          };
+          frame.srcdoc = result.html;
+        });
+        frame.hidden = false;
+        // Hidden iframe documents can return empty computed styles in WebKit.
+        stylePageScrollbars(frame.contentDocument!);
+        presentation = preparePresentation(frame.contentDocument!);
+        frame.contentDocument!.addEventListener('dragover', preventFileDrop);
+        frame.contentDocument!.addEventListener('drop', preventFileDrop);
+        frame.contentDocument!.addEventListener('keydown', keyboard);
+        frame.contentDocument!.addEventListener('wheel', slideWheel, { passive: false });
+        frame.contentDocument!.addEventListener('pointermove', revealPresentationControls);
+        updateUI({ filename: next.filename, documentFormat: result.format, project: next.project, slideIndex: 0, slideCount: presentation?.slides.length ?? 0 }); setMode(false);
+        if (result.warnings.length || mapFailures) showDialog(t('support'), [...result.warnings.map(localizeError), ...(mapFailures ? [t('mapping', { count: mapFailures })] : [])].join('\n'), [{ label: t('preview'), icon: 'eye', action: closeDialog }]);
+      } catch (error) {
+        if (!activated) throw error; // Reading or parsing failure keeps the active document intact.
+        // The native session changed; never keep an old page attached to its resource token.
+        active?.input.remove(); surface.hidden = true; opened = null; parsed = null; elements.clear(); active = null; frame.srcdoc = ''; frame.hidden = true;
+        presentation?.dispose(); presentation = null;
+        editing = false; updateUI({ filename: null, documentFormat: null, project: false, slideCount: 0, slideIndex: 0, editing: false });
+        view = { revision: 0, texts: {}, canUndo: false, canRedo: false, dirty: false };
+        throw error;
+      }
+    });
+  } finally { switchingDocument = false; update(); }
 }
 async function exportFile(): Promise<boolean> {
   await finish();
@@ -334,7 +351,7 @@ async function guardUnsaved(): Promise<boolean> {
 }
 async function history(command: string) { await finish(); await enqueue(async () => sync(await invoke<SessionView>(command, { sessionId: opened!.sessionId, expectedRevision: view.revision }))); }
 function keyboard(event: KeyboardEvent) {
-  if (event.isComposing || getUI().dialog || getUI().settingsOpen || getUI().menuOpen) return;
+  if (switchingDocument || event.isComposing || getUI().dialog || getUI().settingsOpen || getUI().menuOpen) return;
   if (getUI().presenting && event.key === 'Escape') {
     event.preventDefault(); void exitSlideshow().catch(notice); return;
   }
@@ -366,10 +383,10 @@ function settings() {
   }})).catch(notice);
 }
 mountShell({
-  open: () => showDialog(t('openChoice'), t('openChoiceBody'), [
+  open: () => { if (switchingDocument) return; showDialog(t('openChoice'), t('openChoiceBody'), [
     { label: t('open'), icon: 'file', action: () => { closeDialog(); void open().catch(notice); } },
     { label: t('openProject'), icon: 'project', primary: true, action: () => { closeDialog(); void open(false, true).catch(notice); } },
-  ]),
+  ]); },
   previousSlide: () => { if (presentation) void goSlide(presentation.index - 1).catch(notice); },
   nextSlide: () => { if (presentation) void goSlide(presentation.index + 1).catch(notice); },
   sample: () => { void open(true).catch(notice); },
@@ -390,6 +407,32 @@ window.addEventListener('resize', () => {
   clearTimeout(fullscreenCheckTimer);
   fullscreenCheckTimer = window.setTimeout(() => { void slideshow.sync().catch(notice); }, 150);
 });
-void listen('close-requested', () => { void finish().then(guardUnsaved).then(ok => { if(ok) return invoke('close_application'); }).catch(notice); });
+async function closeApplication() {
+  if (switchingDocument || getUI().dialog || getUI().settingsOpen || composing) return;
+  switchingDocument = true; update();
+  try { await finish(); if (await guardUnsaved()) await invoke('close_application'); }
+  finally { switchingDocument = false; update(); }
+}
+const openRequests = createOpenRequestPump({
+  blocked: () => switchingDocument || composing || pending > 0 || !!getUI().dialog || getUI().settingsOpen || getUI().menuOpen,
+  pending: () => invoke<string | null>('pending_open_request'),
+  open: id => open(false, false, id),
+  dismiss: requestId => invoke('dismiss_open_request', { requestId }),
+  error: notice,
+});
+let nativeOpenReady = false;
+subscribeUI(() => { if (nativeOpenReady) openRequests.wake(); });
+document.addEventListener('compositionstart', () => { composing = true; });
+document.addEventListener('compositionend', () => {
+  // Allow the final composition input event to settle before committing text.
+  setTimeout(() => { composing = false; if (nativeOpenReady) openRequests.wake(); }, 0);
+});
+void (async () => {
+  await listen('close-requested', () => { void closeApplication().catch(notice); });
+  await listen<string>('open-request-error', event => notice(event.payload));
+  await listen('open-requested', () => openRequests.wake());
+  nativeOpenReady = true;
+  openRequests.wake();
+})().catch(notice);
 requestAnimationFrame(() => { void invoke<number>('frontend_ready', {userAgent:navigator.userAgent}).then(ms=>startupMs=ms).catch(notice); });
 update();

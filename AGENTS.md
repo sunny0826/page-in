@@ -25,6 +25,7 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 ## 产品与数据不变量
 
 - PageIn 是轻量的本地 HTML 原位文字编辑器，保持页面原有排版、样式和本地资源。单文件模式打开 HTML；演示项目模式选择包含 `index.html` / `index.htm` 的文件夹。
+- 系统文件关联和窗口拖放支持单个 `.html` / `.htm`，均走单文件模式与未导出确认；原生请求由 Rust 排队并签发 ID，前端不得传任意路径。系统关联不强制修改默认应用，单实例启动复用现有窗口。详见 [ADR-009](docs/ADR-009-native-file-open.md)。
 - 原始字节不可变。导出只按已验证的 UTF-8 字节区间应用文字补丁，未修改区间保持逐字节一致。禁止通过 DOM 序列化、`outerHTML` 或整页重建保存内容。
 - JavaScript 的 UTF-16 offset 不等于 UTF-8 字节偏移；映射须覆盖中文、Emoji、BOM、CRLF、实体和换行标题。无法可靠映射、复杂混合或带变换的片段保持只读，不猜测回写位置。
 - 导出创建新文件或新目录，不覆盖原始文件、已有目标或源项目内部路径。项目模式只修改入口 HTML，其余资源和空目录保持完整；拒绝外部已修改的入口、符号链接、特殊文件和越界路径。

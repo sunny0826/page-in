@@ -73,7 +73,7 @@ const messages = {
   demoTag: ["在这里，直接修改", "Edit right here"],
   steps: ["使用步骤", "How it works"],
   stepOpen: ["打开文件", "Open a file"],
-  stepOpenBody: ["选择电脑里的 HTML", "Choose an HTML file on your computer"],
+  stepOpenBody: ["选择或拖入电脑里的 HTML", "Choose or drop an HTML file"],
   stepEdit: ["双击改字", "Double-click to edit"],
   stepEditBody: ["在页面原位置直接输入", "Type directly on the page"],
   stepExport: ["导出新文件", "Export a new file"],
@@ -161,6 +161,9 @@ export function t(
 
 // Shared parser/native errors remain stable; translate them only at the UI boundary.
 const errorMessages: Record<string, string> = {
+  "请一次只打开一个 HTML 文件": "Please open one HTML file at a time.",
+  "打开请求已失效": "This open request has expired.",
+  "打开请求过多，请稍后重试": "Too many open requests. Please try again shortly.",
   "项目文件夹中需要有 index.html 或 index.htm": "The project folder must contain index.html or index.htm.",
   "原 HTML 已被外部修改，请重新打开项目后再导出": "The original HTML changed outside PageIn. Reopen the project before exporting.",
   "项目目录层级过深": "The project directory tree is too deep.",

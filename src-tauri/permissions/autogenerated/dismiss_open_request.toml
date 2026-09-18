@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dismiss-open-request"
+description = "Enables the dismiss_open_request command without any pre-configured scope."
+commands.allow = ["dismiss_open_request"]
+
+[[permission]]
+identifier = "deny-dismiss-open-request"
+description = "Denies the dismiss_open_request command without any pre-configured scope."
+commands.deny = ["dismiss_open_request"]
