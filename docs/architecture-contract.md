@@ -2,7 +2,7 @@
 
 ## T1 UI 外壳补充（2026-09-17）
 
-依据 [ADR-004](ADR-004-base-ui-shell.md)，Base UI/React 拥有应用外壳的视图、菜单与对话框交互；`main.ts` 继续拥有打开/导出流程、编辑事务、iframe 映射与 IPC 队列。两者通过 UI 状态快照与动作回调连接，UI 不直接调用原生文件或修改文档 DOM。状态至少包含 filename、editing、busy、dirty、canUndo、canRedo、activeInput、menuOpen、dialog 与 notice。弹窗取消必须完成原有 guardUnsaved 的 Promise；模态弹窗打开时不得触发文档快捷键。
+依据 [ADR-004](ADR-004-base-ui-shell.md)，Base UI/React 拥有应用外壳的视图、菜单与对话框交互；依据 [ADR-010](ADR-010-codebase-simplification.md)，`main.ts` 协调打开/导出流程与 IPC 队列；输入事务由 `input-surface.ts` 管理，iframe 解析与映射由 `document-frame.ts` 管理，快捷键意图由 `keyboard.ts` 解析。两者通过 UI 状态快照与动作回调连接，UI 不直接调用原生文件或修改文档 DOM。状态至少包含 filename、editing、busy、dirty、canUndo、canRedo、activeInput、settingsOpen、dialog 与 notice。弹窗取消必须完成原有 guardUnsaved 的 Promise；模态弹窗打开时不得触发文档快捷键。
 
 选择局部接入以降低编辑回归风险；全量 React 重写作为替代方案暂不采用。现有 `contracts.ts` 的 T1 类型、命令字段、字节补丁、资源权限及 [ADR-003](ADR-003-webkit-input-surface.md) 继续有效。
 

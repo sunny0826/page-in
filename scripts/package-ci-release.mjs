@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { thirdPartyNotices, writeInventory, readJSON } from "./release-common.mjs";
 import {
   copyFileSync,
   existsSync,
@@ -18,7 +18,7 @@ assert.equal(process.arch, "x64");
 assert.equal(process.platform, platform === "windows-x64" ? "win32" : "linux");
 const root = process.cwd();
 await import(pathToFileURL(path.join(root, "scripts/check-version.mjs")));
-const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+const pkg = readJSON("package.json");
 assert.equal(pkg.version, "0.0.1");
 const run = (command, args) =>
   execFileSync(command, args, {
@@ -61,68 +61,9 @@ const target =
   platform === "windows-x64"
     ? "x86_64-pc-windows-msvc"
     : "x86_64-unknown-linux-gnu";
-const notices = [
-  "PageIn third-party component notices",
-  `Platform: ${platform}`,
-  "Includes build-time dependencies.",
-];
-function notice(name, version, license, directory, extraFile) {
-  notices.push(
-    `\n${"=".repeat(72)}\n${name} ${version}\nDeclared license: ${license ?? "See package sources"}\n`,
-  );
-  const files = readdirSync(directory, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isFile() &&
-        /^(licen[cs]e|copying|notice)(?:[._-]|$)/i.test(entry.name),
-    )
-    .map((entry) => entry.name);
-  if (
-    extraFile &&
-    existsSync(path.join(directory, extraFile)) &&
-    !files.includes(extraFile)
-  )
-    files.push(extraFile);
-  for (const file of files.sort())
-    notices.push(
-      `--- ${file} ---\n${readFileSync(path.join(directory, file), "utf8")}`,
-    );
-}
-const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
-for (const [directory, info] of Object.entries(lock.packages)) {
-  if (!directory || !existsSync(directory)) continue;
-  const meta = JSON.parse(
-    readFileSync(path.join(directory, "package.json"), "utf8"),
-  );
-  notice(meta.name, info.version, info.license ?? meta.license, directory);
-}
-const metadata = JSON.parse(
-  run("cargo", [
-    "metadata",
-    "--manifest-path",
-    "src-tauri/Cargo.toml",
-    "--format-version",
-    "1",
-    "--locked",
-    "--filter-platform",
-    target,
-  ]),
-);
-for (const info of metadata.packages
-  .filter((item) => item.source)
-  .sort((a, b) => a.name.localeCompare(b.name))) {
-  notice(
-    info.name,
-    info.version,
-    info.license,
-    path.dirname(info.manifest_path),
-    info.license_file,
-  );
-}
-writeFileSync(
-  path.join(output, `THIRD-PARTY-NOTICES-${platform}.txt`),
-  notices.join("\n"),
-);
+writeFileSync(path.join(output, `THIRD-PARTY-NOTICES-${platform}.txt`), thirdPartyNotices(run, target, [
+  `Platform: ${platform}`, "Includes build-time dependencies.",
+]));
 const install =
   platform === "windows-x64"
     ? `运行 ${stem}-setup.exe 安装。需要 Microsoft WebView2；缺失时安装程序联网下载。\n此安装程序未进行 Windows 代码签名。\n`
@@ -131,42 +72,12 @@ writeFileSync(
   path.join(output, `INSTALL-${platform}.txt`),
   `PageIn ${pkg.version}\n\n${install}\nCI 已执行自动测试和构建；尚未在 Windows / Omarchy 实机验证安装、启动、编辑、放映和导出。\n源码：v0.0.1 (${sourceCommit})\n本正式版按维护者授权替换同版本预发布；旧安装包和校验和不再适用。\n`,
 );
-const digest = (name) => {
-  const bytes = readFileSync(path.join(output, name));
-  return {
-    name,
-    bytes: bytes.length,
-    sha256: createHash("sha256").update(bytes).digest("hex"),
-  };
-};
-const files = readdirSync(output).sort().map(digest);
-const manifestName = `manifest-${platform}.json`;
-writeFileSync(
-  path.join(output, manifestName),
-  JSON.stringify(
-    {
-      product: "PageIn",
-      version: pkg.version,
-      platform,
-      target,
-      sourceTag: "v0.0.1",
-      sourceCommit,
-      workflowCommit: process.env.GITHUB_SHA,
-      workflowRun: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-      signing: "unsigned",
-      runtimeVerification: "pending user verification",
-      builtAt: new Date().toISOString(),
-      files,
-    },
-    null,
-    2,
-  ) + "\n",
-);
-files.push(digest(manifestName));
-writeFileSync(
-  path.join(output, `SHA256SUMS-${platform}.txt`),
-  files.map((file) => `${file.sha256}  ${file.name}`).join("\n") + "\n",
-);
+const files = writeInventory(output, {
+  version: pkg.version, platform, target, sourceTag: "v0.0.1", sourceCommit,
+  workflowCommit: process.env.GITHUB_SHA,
+  workflowRun: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+  signing: "unsigned", runtimeVerification: "pending user verification",
+}, `manifest-${platform}.json`, `SHA256SUMS-${platform}.txt`);
 console.log(
   `Prepared ${platform}: ${files.map((file) => file.name).join(", ")}`,
 );

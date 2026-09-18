@@ -37,18 +37,18 @@ test("unsaved-change confirmation closes settings and retains the document", () 
   dismissDialog();
 });
 
-test("render snapshots preserve document state while menus and notices change", () => {
+test("render snapshots preserve document state while settings and notices change", () => {
   updateUI({ filename: "example.html", dirty: true });
   const before = getUI();
   let updates = 0;
   const unsubscribe = subscribeUI(() => updates++);
-  updateUI({ menuOpen: true, notice: "提示" });
+  updateUI({ settingsOpen: true, notice: "提示" });
   assert.equal(getUI().filename, "example.html");
   assert.equal(getUI().dirty, true);
   assert.notEqual(getUI(), before);
-  assert.equal(before.menuOpen, false);
+  assert.equal(before.settingsOpen, false);
   assert.equal(updates, 1);
   unsubscribe();
-  updateUI({ menuOpen: false, notice: null });
+  updateUI({ settingsOpen: false, notice: null });
   assert.equal(updates, 1);
 });
