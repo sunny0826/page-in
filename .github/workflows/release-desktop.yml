@@ -1,7 +1,12 @@
-name: Desktop pre-release packages
+name: Desktop release candidate packages
 
 on:
   workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full 40-character source commit for the authorized v0.0.1 rebuild
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -31,6 +36,7 @@ jobs:
     env:
       APPIMAGE_EXTRACT_AND_RUN: "1"
       CARGO_INCREMENTAL: "0"
+      EXPECTED_SOURCE_COMMIT: ${{ inputs.source_commit }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,7 +47,7 @@ jobs:
       - name: Check out immutable release source
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/v0.0.1
+          ref: ${{ inputs.source_commit }}
           path: release-source
           persist-credentials: false
       - name: Install Linux system dependencies
@@ -58,7 +64,8 @@ jobs:
           workspaces: release-source/src-tauri -> target
       - name: Verify source and tool versions
         run: |
-          test "$(git rev-parse HEAD)" = de217e61e9f3aeae3d2c7b874fa0c0ec5727855a
+          [[ "$EXPECTED_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_COMMIT"
           mise exec -- node --version
           mise exec -- npm --version
           mise exec -- rustc --version
@@ -74,33 +81,10 @@ jobs:
       - name: Build native packages
         run: mise exec -- npm run tauri -- build --ci --bundles ${{ matrix.bundles }} -- --locked
       - name: Collect packages and provenance
-        run: mise exec -- node ../scripts/package-ci-release.mjs ${{ matrix.platform }}
+        run: mise exec -- node scripts/package-ci-release.mjs ${{ matrix.platform }}
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.platform }}
           path: release-source/release-assets/*
           if-no-files-found: error
           retention-days: 14
-
-  publish:
-    needs: build
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: release-*
-          path: release-assets
-          merge-multiple: true
-      - name: Verify and upload to the existing pre-release
-        working-directory: release-assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          sha256sum -c SHA256SUMS-windows-x64.txt
-          sha256sum -c SHA256SUMS-linux-x64.txt
-          test "$(gh release view v0.0.1 --json isPrerelease,isDraft --jq '.isPrerelease and (.isDraft | not)')" = true
-          gh release upload v0.0.1 ./*

@@ -2,6 +2,8 @@
 
 日期：2026-09-18。
 
+本文件保留历史预发布决策。后续用户授权使用当前源码正式重发 v0.0.1，标签、附件与发布状态约束已由 [ADR-008](ADR-008-v0.0.1-formal-release.md) 部分取代。
+
 ## 决策与替代范围
 
 按用户要求，将已公开的 0.0.1 标记为 pre-release，补充 Windows x64 NSIS 安装程序和 Linux x64 AppImage、Debian 包。AppImage 供 Omarchy 试用，Debian 包用于 Debian/Ubuntu。部分取代 [ADR-006](ADR-006-first-release.md) 的「仅 macOS 分发」和「Release 草稿」约束；版本、身份、原文件不可变、静态预览、资源目录约束及 macOS 签名声明继续有效。

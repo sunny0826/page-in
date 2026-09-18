@@ -2,6 +2,8 @@
 
 日期：2026-09-18。依据 [ADR-007](ADR-007-cross-platform-prerelease.md) 和[发布契约](cross-platform-release-contract.md)。
 
+本文件记录旧预发布产物，其摘要仅适用于旧包。当前源码正式重发依据 [ADR-008](ADR-008-v0.0.1-formal-release.md)，不得将下列旧包摘要当作重发包校验值。
+
 ## 结果
 
 [GitHub Actions 构建及发布](https://github.com/sunny0826/page-in/actions/runs/35302962107) 的 Linux、Windows、publish 三个任务全部成功。产物已追加到 [PageIn 0.0.1 Pre-release](https://github.com/sunny0826/page-in/releases/tag/v0.0.1)，Release 为公开、非草稿、pre-release。

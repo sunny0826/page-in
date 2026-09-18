@@ -30,7 +30,18 @@ const run = (command, args = []) =>
   });
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const config = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
-const output = path.join(root, "releases", pkg.version);
+const sourceCommit = run("git", ["rev-parse", "HEAD"]).trim();
+assert.match(sourceCommit, /^[0-9a-f]{40}$/);
+assert.equal(
+  run("git", ["status", "--porcelain", "--untracked-files=no"]).trim(),
+  "",
+  "Release source must be clean",
+);
+const output = path.join(
+  root,
+  "releases",
+  `${pkg.version}-${sourceCommit.slice(0, 12)}`,
+);
 assert(!existsSync(output), `Release directory already exists: ${output}`);
 const bundle = path.join(
   root,
@@ -142,7 +153,7 @@ try {
     zip,
   ]);
   symlinkSync("/Applications", path.join(stage, "Applications"));
-  const install = `PageIn ${pkg.version}\n\nmacOS 13+ / Apple Silicon (arm64)\n\n将 PageIn.app 拖到 Applications 进行安装。\nDrag PageIn.app to Applications to install.\n\n此构建使用 ad-hoc 签名，尚未进行 Developer ID 签名与 Apple 公证。\nThis build is ad-hoc signed, without Developer ID signing or Apple notarization.\n\n打开 HTML 或包含 index.html 的项目目录；导出始终创建新的文件或目录。\n演示预览为静态分页，导出保留原始脚本。\n`;
+  const install = `PageIn ${pkg.version}\n\nmacOS 13+ / Apple Silicon (arm64)\n\n将 PageIn.app 拖到 Applications 进行安装。\nDrag PageIn.app to Applications to install.\n\n此构建使用 ad-hoc 签名，尚未进行 Developer ID 签名与 Apple 公证。\nThis build is ad-hoc signed, without Developer ID signing or Apple notarization.\n\n打开 HTML 或包含 index.html 的项目目录；导出始终创建新的文件或目录。\n放映支持可信内置动效，预览不执行原页面脚本；导出保留原始脚本。\n源码：v${pkg.version} (${sourceCommit})\n本正式版按维护者授权替换同版本预发布；旧安装包和校验和不再适用。\n`;
   writeFileSync(path.join(stage, "使用说明.txt"), install);
   writeFileSync(path.join(output, "INSTALL.txt"), install);
   writeFileSync(path.join(output, "THIRD-PARTY-NOTICES.txt"), licenseText);
@@ -182,6 +193,10 @@ try {
         identifier: config.identifier,
         platform: "macOS",
         architecture: "arm64",
+        sourceTag: `v${pkg.version}`,
+        sourceCommit,
+        runtimeVerification:
+          "Package integrity checked; desktop runtime verification is recorded separately",
         minimumSystemVersion: "13.0",
         signing: "ad-hoc",
         notarized: false,

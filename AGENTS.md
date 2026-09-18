@@ -67,12 +67,12 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 ## 发布约束
 
 - npm 包、npm 根锁条目、Cargo 包与锁条目、Tauri 的版本保持一致，发布前执行 `version:check`。产品身份为 PageIn / pagein / `io.pagein.desktop`。
-- 已发布标签、安装包及源码来源必须一致；补充同版本平台包时记录完整源码 SHA，不移动标签或将其他提交的包伪装为原标签构建。
-- **0.0.1 当前为 pre-release**：保留 macOS arm64 DMG/ZIP，提供 Windows x64 NSIS `.exe`、Linux x64 AppImage 和 `.deb`。Omarchy 使用 AppImage；`.deb` 仅用于 Debian/Ubuntu，不代表扩大 Linux 实机支持承诺。
-- 0.0.1 的跨平台分发以 [ADR-007](docs/ADR-007-cross-platform-prerelease.md) 为准，不套用 ADR-001 中仅提供 Arch 原生包的旧方案。Windows / Omarchy 桌面验证由用户后续执行，未获得实际证据前不得标记已验收或改为稳定版。
+- 已发布标签、安装包及源码来源必须一致；默认不移动已发布标签。2026-09-18 用户明确授权本次 v0.0.1 使用当前源码替换旧标签及全部安装包，单次例外按 [ADR-008](docs/ADR-008-v0.0.1-formal-release.md) 执行，必须备份旧发布、记录完整源码 SHA 并披露替换事实，不推广为后续发布的默认规则。
+- **0.0.1 按用户授权正式重发**：提供 macOS arm64 DMG/ZIP、Windows x64 NSIS `.exe`、Linux x64 AppImage 和 `.deb`。Omarchy 使用 AppImage；`.deb` 仅用于 Debian/Ubuntu，不代表扩大 Linux 实机支持承诺。
+- 0.0.1 当前分发以 ADR-008 为准，ADR-007 保留历史预发布依据。正式发布状态不等于跨平台实机验收，Windows / Omarchy 桌面验证仍由用户后续执行，未获得实际证据前不得标记已验收。
 - 平台附件附独立安装说明、第三方声明、manifest 和 SHA-256；保留其他平台已有校验清单，区分已签名、ad-hoc 与未签名状态。校验通过不等于代码签名、公证或目标系统启动成功。
 - Windows CI 检出发布源码时保留 LF，避免 `core.autocrlf` 转换导致现有版本脚本误报。
-- [.github/workflows/release-desktop.yml](.github/workflows/release-desktop.yml) 和 [scripts/package-ci-release.mjs](scripts/package-ci-release.mjs) 当前固定构建 `v0.0.1` 及其 SHA；发布新版本前必须显式更新相应约束，不直接复用为新版本发布器。
+- [.github/workflows/release-desktop.yml](.github/workflows/release-desktop.yml) 通过 `source_commit` 接受精确完整 SHA；[scripts/package-ci-release.mjs](scripts/package-ci-release.mjs) 校验其与 `EXPECTED_SOURCE_COMMIT` 一致，并固定版本 `0.0.1`。CI 仅构建 artifact，三平台包校验齐备后统一发布；新版本须显式更新版本约束。
 
 ## 依据与维护
 

@@ -1,14 +1,17 @@
 # 更新记录
 
-## 0.0.1 Pre-release — 2026-09-18
+## 0.0.1 — 2026-09-18
 
 首个可分发版本，支持 macOS 上的本地 HTML 文字编辑和 HTML 演示项目。
 
 - 原位编辑文字、逐行编辑换行标题、撤销与重做。
 - 单 HTML 导出，以及保留资源目录结构的完整项目导出。
 - 平级 HTML 幻灯片分页展示，支持按钮、方向键和滚轮。
-- 无独立顶栏的 macOS 窗口、紧凑图标浮栏、自适应配色滚动条。
+- 独占 32px 的紧凑顶部栏、macOS 原生窗口按钮与新的纸页/文字光标应用图标。
+- 从当前页进入全屏放映；报告滚动、演示翻页，Esc 退出并恢复编辑/预览状态。
+- 可信父页面提供内置放映动效、条形图和字符画布；支持减少动态效果，原页面脚本仍禁用。
+- 修复 WKWebView 翻页动画结束事件缺失引起的内容重叠，覆盖快速切换与退出清理。
 - 中文和英文界面，设置中可查看版本与诊断信息。
 - 修复 WebKit 输入被设为只读，以及脚本移除导致源位置映射偏移的问题。
 
-提供 macOS 13+ / Apple Silicon、Windows x64 和 Linux x64 构建，Omarchy 使用 AppImage。Windows / Linux 包已进入预发布流程，桌面运行验证由用户后续执行。macOS 使用 ad-hoc 签名，尚未进行 Developer ID 签名与 Apple 公证；Windows 包未做代码签名。预览不运行原页面脚本；导出保留原代码。详见 [发布说明](docs/releases/0.0.1.md)。
+经维护者明确授权，本正式版替换同版本预发布的标签与全部安装包，包含后续界面和放映改动。提供 macOS 13+ / Apple Silicon、Windows x64 和 Linux x64 构建，Omarchy 使用 AppImage。Windows / Omarchy 桌面运行验证仍待用户完成，正式发布状态不代表实机验证通过。macOS 使用 ad-hoc 签名，无 Developer ID 签名或 Apple 公证；Windows 包未做代码签名。详见 [发布说明](docs/releases/0.0.1.md)。

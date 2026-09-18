@@ -26,7 +26,13 @@ const run = (command, args) =>
     maxBuffer: 64 * 1024 * 1024,
   }).trim();
 const sourceCommit = run("git", ["rev-parse", "HEAD"]);
-assert.equal(sourceCommit, "de217e61e9f3aeae3d2c7b874fa0c0ec5727855a");
+assert.match(process.env.EXPECTED_SOURCE_COMMIT ?? "", /^[0-9a-f]{40}$/);
+assert.equal(sourceCommit, process.env.EXPECTED_SOURCE_COMMIT);
+assert.equal(
+  run("git", ["status", "--porcelain", "--untracked-files=no"]),
+  "",
+  "Release source must be clean",
+);
 const output = path.join(root, "release-assets");
 assert(!existsSync(output), "Refusing to overwrite release assets");
 mkdirSync(output);
@@ -123,7 +129,7 @@ const install =
     : `Omarchy / Linux x64：下载 ${stem}.AppImage，执行 chmod +x ${stem}.AppImage 后运行。\n若提示缺少 FUSE，可尝试 ./${stem}.AppImage --appimage-extract-and-run。\n.deb 仅用于 Debian/Ubuntu，不用于 Omarchy。\n`;
 writeFileSync(
   path.join(output, `INSTALL-${platform}.txt`),
-  `PageIn ${pkg.version} pre-release\n\n${install}\nCI 已执行自动测试和构建；尚未在 Windows / Omarchy 实机验证安装、启动、编辑和导出。\n源码：v0.0.1 (${sourceCommit})\n`,
+  `PageIn ${pkg.version}\n\n${install}\nCI 已执行自动测试和构建；尚未在 Windows / Omarchy 实机验证安装、启动、编辑、放映和导出。\n源码：v0.0.1 (${sourceCommit})\n本正式版按维护者授权替换同版本预发布；旧安装包和校验和不再适用。\n`,
 );
 const digest = (name) => {
   const bytes = readFileSync(path.join(output, name));
