@@ -2,6 +2,8 @@ import './style.css';
 import './scrollbars.css';
 import { stylePageScrollbars } from './page-scrollbars.ts';
 import { preparePresentation } from './presentation.ts';
+import { createSlideshow } from './slideshow.ts';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { OpenedDocument, ParsedDocument, SessionView, TextEntry } from './contracts.ts';
@@ -34,6 +36,52 @@ let startupMs = 0;
 let mapFailures = 0;
 let presentation: ReturnType<typeof preparePresentation> = null;
 let lastSlideWheel = 0;
+let restoreEditing = false;
+let controlsTimer = 0;
+let fullscreenCheckTimer = 0;
+const slideshow = createSlideshow({
+  isFullscreen: () => getCurrentWindow().isFullscreen(),
+  setFullscreen: async value => {
+    const host = getCurrentWindow();
+    await host.setFullscreen(value);
+    // macOS changes Spaces asynchronously; don't hide the shell on request alone.
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (await host.isFullscreen() === value) return;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    // Roll back a failed entry only; never re-enter fullscreen after an exit timeout.
+    if (value) await host.setFullscreen(false);
+    throw new Error(t('fullscreenTimeout'));
+  },
+}, value => {
+  if (value) restoreEditing = editing;
+  document.documentElement.classList.toggle('slideshow', value);
+  updateUI({ presenting: value, presentationControls: true });
+  setMode(value ? false : restoreEditing);
+  clearTimeout(controlsTimer);
+  if (value) revealPresentationControls();
+  requestAnimationFrame(() => {
+    if (value) {
+      if (presentation) surface.focus({ preventScroll: true });
+      else frame.contentWindow?.focus();
+    } else {
+      document.querySelector<HTMLButtonElement>(`.titlebar button[aria-label="${t('present')}"]`)?.focus();
+    }
+  });
+});
+
+function revealPresentationControls() {
+  if (!getUI().presenting) return;
+  clearTimeout(controlsTimer);
+  if (!getUI().presentationControls) updateUI({ presentationControls: true });
+  controlsTimer = window.setTimeout(() => updateUI({ presentationControls: false }), 2200);
+}
+async function startSlideshow() {
+  if (!opened || getUI().busy || getUI().presenting || getUI().dialog || getUI().settingsOpen) return;
+  await finish();
+  await enqueue(() => slideshow.enter());
+}
+function exitSlideshow() { return enqueue(() => slideshow.exit()); }
 
 async function goSlide(index: number) {
   await finish();
@@ -138,6 +186,7 @@ async function begin(element: HTMLElement) {
   update();
 }
 function setMode(value: boolean) {
+  presentation?.setMotionEnabled(getUI().presenting && !value);
   editing = value;
   surface.hidden = !value && !presentation;
   surface.tabIndex = presentation ? 0 : -1;
@@ -219,6 +268,7 @@ document.addEventListener("paste", event => {
 });
 document.addEventListener("drop", event => { if (editing) event.preventDefault(); });
 async function open(sample = false, project = false) {
+  if (getUI().presenting) await exitSlideshow();
   await finish();
   if (!await guardUnsaved()) return;
   await enqueue(async () => {
@@ -229,6 +279,7 @@ async function open(sample = false, project = false) {
       const result = await parseInWorker(next.source, next.resourceBase);
       const registered = await invoke<SessionView>('register_manifest', { sessionId: next.sessionId, entries: result.entries });
       activated = true;
+      presentation?.dispose();
       opened = next; parsed = result;
       await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(t('renderTimeout'))), 10000);
@@ -248,14 +299,15 @@ async function open(sample = false, project = false) {
       presentation = preparePresentation(frame.contentDocument!);
       frame.contentDocument!.addEventListener('keydown', keyboard);
       frame.contentDocument!.addEventListener('wheel', slideWheel, { passive: false });
-      updateUI({ filename: next.filename, project: next.project, slideIndex: 0, slideCount: presentation?.slides.length ?? 0 }); setMode(false);
+      frame.contentDocument!.addEventListener('pointermove', revealPresentationControls);
+      updateUI({ filename: next.filename, documentFormat: result.format, project: next.project, slideIndex: 0, slideCount: presentation?.slides.length ?? 0 }); setMode(false);
       if (result.warnings.length || mapFailures) showDialog(t('support'), [...result.warnings.map(localizeError), ...(mapFailures ? [t('mapping', { count: mapFailures })] : [])].join('\n'), [{ label: t('preview'), icon: 'eye', action: closeDialog }]);
     } catch (error) {
       if (!activated) throw error; // Reading or parsing failure keeps the active document intact.
       // The native session changed; never keep an old page attached to its resource token.
       active?.input.remove(); surface.hidden = true; opened = null; parsed = null; elements.clear(); active = null; frame.srcdoc = ''; frame.hidden = true;
-      presentation = null;
-      editing = false; updateUI({ filename: null, project: false, slideCount: 0, slideIndex: 0, editing: false });
+      presentation?.dispose(); presentation = null;
+      editing = false; updateUI({ filename: null, documentFormat: null, project: false, slideCount: 0, slideIndex: 0, editing: false });
       view = { revision: 0, texts: {}, canUndo: false, canRedo: false, dirty: false };
       throw error;
     }
@@ -283,6 +335,12 @@ async function guardUnsaved(): Promise<boolean> {
 async function history(command: string) { await finish(); await enqueue(async () => sync(await invoke<SessionView>(command, { sessionId: opened!.sessionId, expectedRevision: view.revision }))); }
 function keyboard(event: KeyboardEvent) {
   if (event.isComposing || getUI().dialog || getUI().settingsOpen || getUI().menuOpen) return;
+  if (getUI().presenting && event.key === 'Escape') {
+    event.preventDefault(); void exitSlideshow().catch(notice); return;
+  }
+  if (event.key === 'F5' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    event.preventDefault(); void startSlideshow().catch(notice); return;
+  }
   const inControl = event.target instanceof Element && !!event.target.closest('button, input, select, textarea, [contenteditable]');
   if (presentation && !active && !inControl && !event.metaKey && !event.ctrlKey && !event.altKey) {
     const index = event.key === 'Home' ? 0 : event.key === 'End' ? presentation.slides.length - 1
@@ -292,6 +350,8 @@ function keyboard(event: KeyboardEvent) {
   }
   if (active && event.key === 'Escape') { event.preventDefault(); void finish(true).catch(notice); }
   if (active && event.key === 'Enter') { event.preventDefault(); void finish().catch(notice); }
+  // A show is read-only; editing shortcuts must not alter history behind it.
+  if (getUI().presenting) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's' && opened) { event.preventDefault(); void exportFile().catch(notice); }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z' && !active && opened) { event.preventDefault(); void history(event.shiftKey ? 'redo_edit' : 'undo_edit').catch(notice); }
 }
@@ -315,6 +375,8 @@ mountShell({
   sample: () => { void open(true).catch(notice); },
   edit: () => setMode(true),
   preview: () => { void finish().then(() => setMode(false)).catch(notice); },
+  present: () => { void startSlideshow().catch(notice); },
+  exitPresentation: () => { void exitSlideshow().catch(notice); },
   exportFile: () => { void exportFile().catch(notice); },
   undo: () => { void history('undo_edit').catch(notice); },
   redo: () => { void history('redo_edit').catch(notice); },
@@ -322,6 +384,12 @@ mountShell({
   settings,
 });
 document.addEventListener('keydown', keyboard);
+document.addEventListener('pointermove', revealPresentationControls);
+window.addEventListener('resize', () => {
+  if (!getUI().presenting) return;
+  clearTimeout(fullscreenCheckTimer);
+  fullscreenCheckTimer = window.setTimeout(() => { void slideshow.sync().catch(notice); }, 150);
+});
 void listen('close-requested', () => { void finish().then(guardUnsaved).then(ok => { if(ok) return invoke('close_application'); }).catch(notice); });
 requestAnimationFrame(() => { void invoke<number>('frontend_ready', {userAgent:navigator.userAgent}).then(ms=>startupMs=ms).catch(notice); });
 update();

@@ -23,6 +23,25 @@
 
 ## 边界
 
-当前预览是静态分页，未运行页面的动画、WebGL 和远程资源；导出保留原有代码。没有将静态分页验收等同于所有演示框架兼容性验证。Windows / Linux 尚未实机测试。
+上述首次验收为静态分页，未运行页面的动画、WebGL 和远程资源；导出保留原有代码。2026-09-18 的受控放映动效见下方补充记录，不将其等同于任意演示框架兼容性验证。Windows / Linux 尚未实机测试。
 
 原生目录选择器一次出现 Open 禁用，返回上级目录再进入后恢复。增加保存面板默认目录初始化时出现 Save 持续禁用，因此已撤回该初始化。重建并重启最终版本后，目录选择和 Save 按钮均正常；再次整体导出到 artifacts/oss-strategy-ppt-final-check，全部 24 个文件的哈希与原目录一致。最后再次核对原目录全部文件，均未改变。
+
+## 2026-09-18 放映动效修复
+
+- 根因：静态分页样式对所有子元素强制 `animation:none` / `transition:none`，原页面的 Motion 与 Canvas 脚本也不会执行。现由可信父页面提供内置效果，不改变脚本沙箱。
+- 自动检查：36 项前端测试、9 项 Rust 测试、类型检查、版本校验及 macOS Release `.app` 构建通过。新增测试覆盖条形图不改宽度、缺失布局回退、目标/延迟上限、动画取消、可信画布归属与清理。
+- Chromium 前端模拟使用用户原项目入口（17 页），窗口 IPC 使用 mock。逐页确认入场动画，第三页三个新版 `.force-card` 均有独立动画；条形图中间帧缩放为 0.684844，原始 `width:100%` 保持不变。
+- 封面和封底字符场由父页面的 Canvas 渲染并截图确认可见，位图随时间变化。封底画布位置为左半页；快速 Home / End 切换后仅保留当前页及一个画布。截图 `/tmp/pagein-motion-visible-ascii.png` 为本地临时证据，不进入发布包。
+- 开启减少动态效果后，动画与临时画布数量均为 0；关闭后恢复。Esc 退出后动画/画布均清零，顶部操作栏可见。整个检查没有文字提交、撤销、重做或导出 IPC。
+- iframe 仍为 `sandbox="allow-same-origin"`，投影内脚本数量为 0。原入口验证前后 SHA-256 均为 `abb1c6acad5af3acef68b52a3b34b6b8c0657bcbec1d0d45c4addc939ef024a7`。
+- 待验证：当前桌面控制工具按 `.app` 路径仍误解析为旧 `io.pagein.spike`，按 `io.pagein.desktop` 查询返回不可用。因此本轮不宣称原生 WKWebView 动画、全屏及输入实测通过；Windows / Linux 同样待实测。内置效果按语义重现，不承诺与原脚本逐帧一致。
+
+## 2026-09-18 翻页内容重叠修复
+
+- 使用 macOS 自带 AppKit / WebKit（`xcrun swift`）建立独立系统 WKWebView 测试窗口，加载当前解析器生成的原项目投影和当前展示模块；iframe 仍为 `sandbox="allow-same-origin"`，无原文档脚本。此方式绕过桌面控制工具的旧应用标识问题，但不是完整 Tauri 窗口操作验收。
+- 修复前稳定复现用户截图：第 1 页切第 2 页后，800ms 和 1800ms 两次观察均为两页 `hidden=false`、`display:flex`、坐标原点相同；动画 `finished` Promise 已兑现，但 `finish` 事件和 `onfinish` 未触发。截图 `/tmp/pagein-overlap-before.png`。
+- 修复后同样条件下，旧页 `hidden=true` / `display:none`，仅第 2 页留在原点；截图 `/tmp/pagein-overlap-after.png`。保留端点到隐藏旧页之后再取消动画，避免回跳闪现。
+- 系统 WKWebView 回归：17 页顺序播放、25ms 间隔快速前后/首尾跳转、过渡中停用、重新启用及销毁均通过；每次结束仅当前页可见、页级过渡动画数量为 0，退出/销毁后临时画布为 0，过期 Promise 未影响当前页。局部验证脚本和测试窗口只用于本地检查，不打包用户 HTML。
+- 自动检查：40 项前端测试、9 项 Rust 测试、类型与版本检查、macOS Release `.app` 构建通过。新增回归覆盖无 finish 事件、快速反向翻页的延迟完成、退出中断、创建失败及异常取消。
+- 该记录补充前一节“原生动画待验证”的范围：系统 WKWebView 的翻页渲染已复现并验证；完整 Tauri 全屏切换、原生输入与 Windows / Linux 仍未在本轮重验。

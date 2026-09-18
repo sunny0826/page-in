@@ -1,3 +1,5 @@
+import type { DocumentFormat } from './contracts.ts';
+
 export type DialogAction = {
   label: string;
   icon?: "close" | "trash" | "export" | "check" | "eye" | "file" | "project";
@@ -13,10 +15,13 @@ export type DialogState = {
 };
 export type ShellState = {
   filename: string | null;
+  documentFormat: DocumentFormat | null;
   project: boolean;
   slideIndex: number;
   slideCount: number;
   editing: boolean;
+  presenting: boolean;
+  presentationControls: boolean;
   busy: boolean;
   dirty: boolean;
   canUndo: boolean;
@@ -37,10 +42,13 @@ export type ShellState = {
 };
 let state: ShellState = {
   filename: null,
+  documentFormat: null,
   project: false,
   slideIndex: 0,
   slideCount: 0,
   editing: false,
+  presenting: false,
+  presentationControls: true,
   busy: false,
   dirty: false,
   canUndo: false,
@@ -93,6 +101,8 @@ export type ShellActions = {
   sample: () => void;
   edit: () => void;
   preview: () => void;
+  present: () => void;
+  exitPresentation: () => void;
   undo: () => void;
   redo: () => void;
   exportFile: () => void;

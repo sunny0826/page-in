@@ -1,3 +1,5 @@
+export type DocumentFormat = 'report' | 'presentation';
+
 export interface TextEntry {
   nodeId: string;
   startByte: number;
@@ -22,6 +24,7 @@ export interface SessionView {
   dirty: boolean;
 }
 export interface ParsedDocument {
+  format: DocumentFormat;
   html: string;
   entries: TextEntry[];
   warnings: string[];

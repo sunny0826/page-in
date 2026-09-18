@@ -1,6 +1,7 @@
 import { parse, parseFragment, serialize, defaultTreeAdapter as adapter, html } from 'parse5';
 import type { DefaultTreeAdapterTypes } from 'parse5';
 import type { ParsedDocument, TextEntry } from './contracts.ts';
+import { detectDocumentFormat } from './document-format.ts';
 
 type Node = DefaultTreeAdapterTypes.Node;
 type Element = DefaultTreeAdapterTypes.Element;
@@ -67,6 +68,7 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
     }
   }
   sanitize(tree);
+  const format = detectDocumentFormat(tree);
   // Removing scripts can leave adjacent Text nodes. HTML serialization joins
   // them, so normalize before recording DOM paths. A joined range crosses
   // removed source markup and must never become an editable source interval.
@@ -137,5 +139,5 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
     return true;
   });
   if (safe.length === 0) warnings.add('没有找到可安全编辑的纯文本元素');
-  return { html: serialize(tree), entries: safe, warnings: [...warnings] };
+  return { format, html: serialize(tree), entries: safe, warnings: [...warnings] };
 }

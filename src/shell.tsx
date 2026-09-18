@@ -1,10 +1,30 @@
-import { useSyncExternalStore, type ReactNode, type PointerEvent } from "react";
+import { useSyncExternalStore, type PointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { Button } from "@base-ui/react/button";
 import { Dialog } from "@base-ui/react/dialog";
 import { getLocale, setLocale, subscribeLocale, t } from "./i18n.ts";
 import { Separator } from "@base-ui/react/separator";
 import { Tooltip } from "@base-ui/react/tooltip";
+import { FileTextIcon } from "@phosphor-icons/react/dist/csr/FileText";
+import { FolderSimpleIcon } from "@phosphor-icons/react/dist/csr/FolderSimple";
+import { MonitorPlayIcon } from "@phosphor-icons/react/dist/csr/MonitorPlay";
+import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
+import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
+import { FolderOpenIcon } from "@phosphor-icons/react/dist/csr/FolderOpen";
+import { PencilSimpleIcon } from "@phosphor-icons/react/dist/csr/PencilSimple";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
+import { ArrowUUpLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowUUpLeft";
+import { ArrowUUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUUpRight";
+import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
+import { ExportIcon } from "@phosphor-icons/react/dist/csr/Export";
+import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
+import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
+import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
+import { GearSixIcon } from "@phosphor-icons/react/dist/csr/GearSix";
+import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
+import { TrashIcon } from "@phosphor-icons/react/dist/csr/Trash";
+import { PlayCircleIcon } from "@phosphor-icons/react/dist/csr/PlayCircle";
 import {
   dismissDialog,
   getUI,
@@ -13,102 +33,33 @@ import {
   type ShellActions,
 } from "./ui-state.ts";
 
-type IconName =
-  | "file"
-  | "project"
-  | "previous"
-  | "next"
-  | "open"
-  | "edit"
-  | "arrow"
-  | "undo"
-  | "redo"
-  | "eye"
-  | "export"
-  | "more"
-  | "close"
-  | "info"
-  | "shield"
-  | "settings"
-  | "check"
-  | "trash"
-  | "sample";
-const paths: Record<IconName, ReactNode> = {
-  project: <path d="M3 7V4h7l2 3h9v13H3ZM7 11h10M7 15h6" />,
-  previous: <path d="m15 5-7 7 7 7" />,
-  next: <path d="m9 5 7 7-7 7" />,
-  settings: (
-    <>
-      <path d="m10 3-.5 3-2 1-3-.5-2 3 2 2v2l-2 2 2 3 3-.5 2 1 .5 3h4l.5-3 2-1 3 .5 2-3-2-2v-2l2-2-2-3-3 .5-2-1L14 3Z" />
-      <circle cx="12" cy="13" r="3" />
-    </>
-  ),
-  check: <path d="m5 12 4 4L19 6" />,
-  trash: <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />,
-  sample: (
-    <>
-      <rect x="3" y="3" width="18" height="18" rx="3" />
-      <path d="m10 8 6 4-6 4Z" />
-    </>
-  ),
-  file: (
-    <>
-      <path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10Z" />
-      <path d="M13 3v7h7M8 14h8M8 17h5" />
-    </>
-  ),
-  open: (
-    <path d="M3 8V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 10h18l-3 10H5Z" />
-  ),
-  edit: <path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z" />,
-  arrow: <path d="M4 12h16m-6-6 6 6-6 6" />,
-  undo: <path d="m8 4-5 5 5 5M3 9h10a6 6 0 0 1 0 12" />,
-  redo: <path d="m16 4 5 5-5 5m5-5H11a6 6 0 0 0 0 12" />,
-  eye: (
-    <>
-      <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="3" />
-    </>
-  ),
-  export: <path d="M12 16V3m-5 5 5-5 5 5M4 14v6h16v-6" />,
-  more: (
-    <>
-      <circle cx="5" cy="12" r="1" />
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="19" cy="12" r="1" />
-    </>
-  ),
-  close: <path d="m6 6 12 12M6 18 18 6" />,
-  info: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v6m0-10v1" />
-    </>
-  ),
-  shield: (
-    <>
-      <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z" />
-      <path d="m8 12 3 3 5-6" />
-    </>
-  ),
-};
+// Keep all shell icons in the same Phosphor Regular family.
+const icons = {
+  file: FileTextIcon,
+  project: FolderSimpleIcon,
+  present: MonitorPlayIcon,
+  previous: CaretLeftIcon,
+  next: CaretRightIcon,
+  open: FolderOpenIcon,
+  edit: PencilSimpleIcon,
+  arrow: ArrowRightIcon,
+  undo: ArrowUUpLeftIcon,
+  redo: ArrowUUpRightIcon,
+  eye: EyeIcon,
+  export: ExportIcon,
+  more: DotsThreeIcon,
+  close: XIcon,
+  info: InfoIcon,
+  shield: ShieldCheckIcon,
+  settings: GearSixIcon,
+  check: CheckIcon,
+  trash: TrashIcon,
+  sample: PlayCircleIcon,
+} as const;
+type IconName = keyof typeof icons;
 function Icon({ name }: { name: IconName }) {
-  return (
-    <svg
-      className="icon"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.65"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {paths[name]}
-    </svg>
-  );
+  const Component = icons[name];
+  return <Component className="icon" size={18} weight="regular" aria-hidden="true" focusable="false" />;
 }
 function keepInputFocus(event: PointerEvent) {
   // Pointer actions finish input explicitly; keyboard users retain normal focus.
@@ -345,14 +296,14 @@ function Settings({ state }: { state: ReturnType<typeof getUI> }) {
   );
 }
 function WindowGrip() {
-  return /Mac/.test(navigator.platform) ? (
+  return (
     <span
-      className="window-grip"
+      className="titlebar-drag-region"
       data-tauri-drag-region
       aria-hidden="true"
       title={t("dragWindow")}
     />
-  ) : null;
+  );
 }
 function Shell({ actions }: { actions: ShellActions }) {
   const state = useSyncExternalStore(subscribeUI, getUI);
@@ -363,13 +314,13 @@ function Shell({ actions }: { actions: ShellActions }) {
       {!state.filename ? (
         <>
           <Welcome actions={actions} busy={state.busy} />
-          <div className="floating">
+          <div className="titlebar" hidden={state.presenting}>
+            <WindowGrip />
             <div
               className="editor-toolbar"
               role="group"
               aria-label={t("toolbar")}
             >
-              <WindowGrip />
               <ToolButton
                 label={t("openNew")}
                 icon="open"
@@ -387,7 +338,8 @@ function Shell({ actions }: { actions: ShellActions }) {
         </>
       ) : (
         <>
-          <div className="floating">
+          <div className="titlebar" hidden={state.presenting}>
+            <WindowGrip />
             <div
               className={
                 state.editing
@@ -398,31 +350,39 @@ function Shell({ actions }: { actions: ShellActions }) {
               aria-label={t("toolbar")}
               aria-busy={state.busy}
             >
-              <WindowGrip />
+              {state.documentFormat && (
+                <span
+                  className="document-format"
+                  title={t(state.documentFormat === "presentation" ? "presentationFormatHint" : "reportFormatHint")}
+                  aria-label={`${t("documentFormat")}: ${t(state.documentFormat === "presentation" ? "presentationFormatHint" : "reportFormatHint")}`}
+                >
+                  {t(state.documentFormat === "presentation" ? "presentationFormat" : "reportFormat")}
+                </span>
+              )}
+              <div
+                className="document-status"
+                title={`${state.filename} · ${t(state.busy ? "busy" : state.dirty ? "dirty" : "clean")}`}
+              >
+                <span
+                  className={`status-dot ${state.dirty ? "dirty" : ""} ${state.busy ? "pending" : ""}`}
+                />
+                <div>
+                  <span className="filename" title={state.filename}>
+                    {state.filename}
+                  </span>
+                  <span className="save-status" role="status">
+                    {t(
+                      state.busy ? "busy" : state.dirty ? "dirty" : "clean",
+                    )}
+                  </span>
+                </div>
+              </div>
+              <Separator
+                orientation="vertical"
+                className="toolbar-separator"
+              />
               {state.editing ? (
                 <>
-                  <div
-                    className="document-status"
-                    title={`${state.filename} · ${t(state.busy ? "busy" : state.dirty ? "dirty" : "clean")}`}
-                  >
-                    <span
-                      className={`status-dot ${state.dirty ? "dirty" : ""} ${state.busy ? "pending" : ""}`}
-                    />
-                    <div>
-                      <span className="filename" title={state.filename}>
-                        {state.filename}
-                      </span>
-                      <span className="save-status" role="status">
-                        {t(
-                          state.busy ? "busy" : state.dirty ? "dirty" : "clean",
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  <Separator
-                    orientation="vertical"
-                    className="toolbar-separator"
-                  />
                   <ToolButton
                     label={t("undo")}
                     icon="undo"
@@ -466,6 +426,13 @@ function Shell({ actions }: { actions: ShellActions }) {
                 />
               )}
               <ToolButton
+                label={t("present")}
+                icon="present"
+                shortcut="F5"
+                onClick={actions.present}
+                disabled={state.busy}
+              />
+              <ToolButton
                 label={t("openNew")}
                 icon="open"
                 onClick={actions.open}
@@ -479,11 +446,17 @@ function Shell({ actions }: { actions: ShellActions }) {
               />
             </div>
           </div>
-          {state.slideCount > 0 && (
-            <div className="slide-navigation editor-toolbar" role="group" aria-label={t("slides")}>
-              <ToolButton label={t("previousSlide")} icon="previous" onClick={actions.previousSlide} disabled={state.busy || state.slideIndex === 0} />
-              <span className="slide-count" aria-live="polite">{state.slideIndex + 1} / {state.slideCount}</span>
-              <ToolButton label={t("nextSlide")} icon="next" onClick={actions.nextSlide} disabled={state.busy || state.slideIndex === state.slideCount - 1} />
+          {(state.slideCount > 0 || state.presenting) && (
+            <div className={`slide-navigation editor-toolbar${state.presenting ? " presentation-controls" : ""}${state.presenting && !state.presentationControls ? " idle" : ""}`} role="group" aria-label={t(state.presenting ? "present" : "slides")}>
+              {state.slideCount > 0 && <>
+                <ToolButton label={t("previousSlide")} icon="previous" onClick={actions.previousSlide} disabled={state.busy || state.slideIndex === 0} />
+                <span className="slide-count" aria-live="polite">{state.slideIndex + 1} / {state.slideCount}</span>
+                <ToolButton label={t("nextSlide")} icon="next" onClick={actions.nextSlide} disabled={state.busy || state.slideIndex === state.slideCount - 1} />
+              </>}
+              {state.presenting && <>
+                <span className="presentation-hint">{t("presentationHint")}</span>
+                <ToolButton label={t("exitPresentation")} icon="close" shortcut="Esc" onClick={actions.exitPresentation} disabled={state.busy} />
+              </>}
             </div>
           )}
           {state.editing && !state.slideCount && (
