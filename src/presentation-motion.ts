@@ -1,3 +1,35 @@
+type Step = { selector: string; transform?: string; delay?: number; step?: number; group?: boolean };
+const recipes: Record<string, Step[]> = {
+  hero: [{ selector: '[data-anim="title"], .cover-row', transform: 'translateX(-18px)', delay: 150, step: 180 }],
+  statement: [{ selector: '[data-anim="title"], [data-anim="lead"], .half', transform: 'translateY(20px)', delay: 100, step: 250 }],
+  'bar-grow': [
+    { selector: '.row-fill', transform: 'scaleX(0)', step: 100, group: true },
+    { selector: '.row-lbl', transform: 'translateX(-12px)', delay: 250, step: 100 },
+    { selector: '.row-val', transform: 'translateY(0)', delay: 650, step: 100 },
+  ],
+  'duo-mirror': [
+    { selector: '.duo-compare .col:first-child', transform: 'translateX(-24px)', group: true },
+    { selector: '.duo-compare .col:last-child', transform: 'translateX(24px)', delay: 550 },
+    { selector: '.vrule', transform: 'scaleY(0)', delay: 400 },
+  ],
+  'stack-build': [{ selector: '.stack-block', transform: 'translateY(22px) scaleY(0.9)', step: 160, group: true }],
+  'three-forces': [
+    { selector: '.three-forces > div:first-child', transform: 'translateX(-26px)', group: true },
+    { selector: '.three-forces .card-fill, .three-forces .force-card', transform: 'translateX(28px)', delay: 550, step: 180 },
+  ],
+  'grid-reveal': [{ selector: '.sub-card, .cell-6 > .cell', transform: 'translateY(20px) scale(0.96)', step: 90, group: true }],
+  'matrix-fill': [{ selector: '.matrix-fill > *', transform: 'translateY(14px) scale(0.96)', step: 55, group: true }],
+  'field-notes': [{ selector: '.brief-grid > *', group: true }],
+  'four-cards': [
+    { selector: '.four-cards > *', step: 130, group: true },
+    { selector: '[data-anim="line"]', transform: 'scaleX(0)', delay: 100 },
+  ],
+  'split-statement': [
+    { selector: '[data-anim="manifesto"], .kpi-thin', transform: 'translateY(24px)', delay: 150, step: 250 },
+    { selector: '[data-anim="rules"] > *, .takeaway-list li', transform: 'translateX(20px)', delay: 450, step: 120 },
+  ],
+};
+
 // Reviewed display recipes, never code or animation parameters read from document scripts.
 type Entry = { element: HTMLElement; transform: string; delay: number };
 const ease = 'cubic-bezier(0.2, 0, 0.38, 0.9)';
@@ -52,48 +84,12 @@ export function presentationEntries(slide: HTMLElement): Entry[] {
     for (const element of slide.querySelectorAll<HTMLElement>('[data-anim="up"]')) entries.delete(element);
     add(selector, transform, 350, step);
   };
-  switch (recipe) {
-    case 'hero':
-      add('[data-anim="title"], .cover-row', 'translateX(-18px)', 150, 180);
-      break;
-    case 'statement':
-      add('[data-anim="title"], [data-anim="lead"], .half', 'translateY(20px)', 100, 250);
-      break;
-    case 'bar-grow':
-      group('.row-fill', 'scaleX(0)', 100);
-      add('.row-lbl', 'translateX(-12px)', 250, 100);
-      add('.row-val', 'translateY(0)', 650, 100);
-      break;
-    case 'duo-mirror':
-      group('.duo-compare .col:first-child', 'translateX(-24px)');
-      add('.duo-compare .col:last-child', 'translateX(24px)', 550);
-      add('.vrule', 'scaleY(0)', 400);
-      break;
-    case 'stack-build':
-      group('.stack-block', 'translateY(22px) scaleY(0.9)', 160);
-      break;
-    case 'three-forces':
-      group('.three-forces > div:first-child', 'translateX(-26px)');
-      add('.three-forces .card-fill, .three-forces .force-card', 'translateX(28px)', 550, 180);
-      break;
-    case 'grid-reveal':
-      group('.sub-card, .cell-6 > .cell', 'translateY(20px) scale(0.96)', 90);
-      break;
-    case 'matrix-fill':
-      group('.matrix-fill > *', 'translateY(14px) scale(0.96)', 55);
-      break;
-    case 'field-notes':
-      group('.brief-grid > *', 'translateY(18px)', 110);
-      break;
-    case 'four-cards':
-      group('.four-cards > *', 'translateY(18px)', 130);
-      add('[data-anim="line"]', 'scaleX(0)', 100);
-      break;
-    case 'split-statement':
-      add('[data-anim="manifesto"], .kpi-thin', 'translateY(24px)', 150, 250);
-      add('[data-anim="rules"] > *, .takeaway-list li', 'translateX(20px)', 450, 120);
-      for (const element of slide.querySelectorAll<HTMLElement>('[data-anim="rules"]')) entries.delete(element);
-      break;
+  for (const entry of recipe && Object.hasOwn(recipes, recipe) ? recipes[recipe] : []) {
+    if (entry.group) group(entry.selector, entry.transform, entry.step);
+    else add(entry.selector, entry.transform, entry.delay, entry.step);
+  }
+  if (recipe === 'split-statement') {
+    for (const element of slide.querySelectorAll<HTMLElement>('[data-anim="rules"]')) entries.delete(element);
   }
   return [...entries.values()];
 }

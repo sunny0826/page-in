@@ -27,7 +27,6 @@ export type ShellState = {
   canUndo: boolean;
   canRedo: boolean;
   activeInput: boolean;
-  menuOpen: boolean;
   settingsOpen: boolean;
   diagnostics: {
     filename: string | null;
@@ -54,7 +53,6 @@ let state: ShellState = {
   canUndo: false,
   canRedo: false,
   activeInput: false,
-  menuOpen: false,
   settingsOpen: false,
   diagnostics: null,
   dialog: null,
@@ -89,7 +87,6 @@ export function showDialog(
 ) {
   if (state.dialog) dismissDialog();
   updateUI({
-    menuOpen: false,
     settingsOpen: false,
     dialog: { title, body, actions, dismiss },
   });
@@ -107,5 +104,4 @@ export type ShellActions = {
   redo: () => void;
   exportFile: () => void;
   settings: () => void;
-  finishInput: () => void;
 };
