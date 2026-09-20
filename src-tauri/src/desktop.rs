@@ -29,15 +29,35 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         true,
         Some("CmdOrCtrl+Q"),
     )?;
+    // WebKit stops delivering keyboard events to the page once the window is
+    // fullscreen on Linux (see ADR-012), so the page-level Escape handler never
+    // runs there. A native accelerator still works while fullscreen; the item
+    // stays disabled outside fullscreen so the page keeps receiving Escape.
+    #[cfg(target_os = "linux")]
+    let exit_presentation =
+        MenuItem::with_id(app, "exit-presentation", "退出放映", false, Some("Escape"))?;
+    #[cfg(target_os = "linux")]
+    let pagein_menu = Submenu::with_items(
+        app,
+        "PageIn",
+        true,
+        &[
+            &PredefinedMenuItem::close_window(app, None)?,
+            &exit_presentation,
+            &quit,
+        ],
+    )?;
+    #[cfg(not(target_os = "linux"))]
+    let pagein_menu = Submenu::with_items(
+        app,
+        "PageIn",
+        true,
+        &[&PredefinedMenuItem::close_window(app, None)?, &quit],
+    )?;
     let menu = Menu::with_items(
         app,
         &[
-            &Submenu::with_items(
-                app,
-                "PageIn",
-                true,
-                &[&PredefinedMenuItem::close_window(app, None)?, &quit],
-            )?,
+            &pagein_menu,
             &Submenu::with_items(
                 app,
                 "Edit",
@@ -55,10 +75,15 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         ],
     )?;
     app.set_menu(menu)?;
-    app.on_menu_event(|app, event| {
-        if event.id().as_ref() == "request-quit" {
+    app.on_menu_event(|app, event| match event.id().as_ref() {
+        "request-quit" => {
             let _ = app.emit("close-requested", ());
         }
+        #[cfg(target_os = "linux")]
+        "exit-presentation" => {
+            let _ = app.emit("exit-presentation", ());
+        }
+        _ => {}
     });
     let builder =
         tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
@@ -84,10 +109,19 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .hidden_title(true);
     let window = builder.build()?;
     let handle = window.clone();
+    #[cfg(target_os = "linux")]
+    let exit_presentation_item = exit_presentation.clone();
     window.on_window_event(move |event| {
         // WebviewWindow drag/drop is dispatched as WindowEvent by Tauri/Wry.
         if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
             queue_open(handle.app_handle(), paths.clone());
+        }
+        // Only fullscreen may use the native Escape accelerator; elsewhere the
+        // page must keep receiving Escape for its own cancel handling.
+        #[cfg(target_os = "linux")]
+        if matches!(event, tauri::WindowEvent::Resized(_)) {
+            let fullscreen = handle.is_fullscreen().unwrap_or(false);
+            let _ = exit_presentation_item.set_enabled(fullscreen);
         }
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
             api.prevent_close();

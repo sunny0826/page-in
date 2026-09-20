@@ -265,6 +265,11 @@ void (async () => {
   await listen('close-requested', () => { void closeApplication().catch(notice); });
   await listen<string>('open-request-error', event => notice(event.payload));
   await listen('open-requested', () => openRequests.wake());
+  // Linux keeps the native Esc accelerator working while fullscreen, where the
+  // page never sees keydown (ADR-012). Only presenting reacts to it.
+  await listen('exit-presentation', () => {
+    if (getUI().presenting) void controls.exit().catch(notice);
+  });
   nativeOpenReady = true;
   openRequests.wake();
 })().catch(notice);
