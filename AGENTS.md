@@ -22,6 +22,8 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 
 `mise run build` 和 `mise run release-macos` 当前是 macOS 入口，不作为 Windows / Linux 构建命令。
 
+Linux 打包使用 `packaging/aur/PKGBUILD`（T1 落地），在干净 chroot 中构建，不得依赖 mise、全局 npm 安装或宿主私有环境；它使用系统 `nodejs` / `npm` / `rust`，实际版本写入验收记录。
+
 ## 产品与数据不变量
 
 - PageIn 是轻量的本地 HTML 原位文字编辑器，保持页面原有排版、样式和本地资源。单文件模式打开 HTML；演示项目模式选择包含 `index.html` / `index.htm` 的文件夹。
@@ -71,6 +73,9 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 - 已发布标签、安装包及源码来源必须一致；默认不移动已发布标签。2026-09-18 用户明确授权本次 v0.0.1 使用当前源码替换旧标签及全部安装包，单次例外按 [ADR-008](docs/ADR-008-v0.0.1-formal-release.md) 执行，必须备份旧发布、记录完整源码 SHA 并披露替换事实，不推广为后续发布的默认规则。
 - **0.0.1 按用户授权正式重发**：提供 macOS arm64 DMG/ZIP、Windows x64 NSIS `.exe`、Linux x64 AppImage 和 `.deb`。Omarchy 使用 AppImage；`.deb` 仅用于 Debian/Ubuntu，不代表扩大 Linux 实机支持承诺。
 - 0.0.1 当前分发以 ADR-008 为准，ADR-007 保留历史预发布依据。正式发布状态不等于跨平台实机验收，Windows / Omarchy 桌面验证仍由用户后续执行，未获得实际证据前不得标记已验收。
+- **Linux 分发形态自 2026-09-20 起改为 pacman 包与 AUR `pagein-git`**：本机 `makepkg` 出包并在 Omarchy 实机验收，AUR 只提交 PKGBUILD 与 `.SRCINFO`，不提交二进制；AppImage / deb 不再作为后续 Linux 分发形态，v0.0.1 已发布附件保持不动。详见 [ADR-011](docs/ADR-011-linux-pacman-aur-distribution.md)。
+- 本地 pacman 包是验收件而非分发件。`pagein-git` 跟随上游 `main` HEAD、`pkgver` 由 git 派生，不代表任何正式版本，不得描述为已发布版本；仓库版本号在正式发版前保持 0.0.1。
+- AUR 提交是对外发布行为，只在本地安装与桌面验收、干净 chroot 构建均通过后进行；提交后须用 `yay -S pagein-git` 复装验证。
 - 平台附件附独立安装说明、第三方声明、manifest 和 SHA-256；保留其他平台已有校验清单，区分已签名、ad-hoc 与未签名状态。校验通过不等于代码签名、公证或目标系统启动成功。
 - Windows CI 检出发布源码时保留 LF，避免 `core.autocrlf` 转换导致现有版本脚本误报。
 - [.github/workflows/release-desktop.yml](.github/workflows/release-desktop.yml) 通过 `source_commit` 接受精确完整 SHA；[scripts/package-ci-release.mjs](scripts/package-ci-release.mjs) 校验其与 `EXPECTED_SOURCE_COMMIT` 一致，并固定版本 `0.0.1`。CI 仅构建 artifact，三平台包校验齐备后统一发布；新版本须显式更新版本约束。
@@ -79,5 +84,5 @@ rtk proxy mise exec -- cargo clippy --manifest-path src-tauri/Cargo.toml --all-t
 
 - 项目设计记忆：`8af00702-1ed3-4754-bad5-bf67058df626`（2026-09-18 的 UI 约束与 token 结构）；导入模型记忆：`6120a6b2-817b-49e5-9c01-3781f1615f0f`。
 - mise 长期约束记忆：`45b1eedf-9af9-41c3-859a-b6acfbb5b0d2`；RTK 规则继承用户级 `AGENTS.md`。
-- 代码模块职责与共享操作见 [ADR-010](docs/ADR-010-codebase-simplification.md)。当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
-- 当前正式重发证据见 [正式发布验收](docs/formal-release-verification.md)；[跨平台预发布验收](docs/cross-platform-release-verification.md) 保留历史记录。后续验证或用户决策改变时更新相关文档，不重复固化已过期结论。
+- 代码模块职责与共享操作见 [ADR-010](docs/ADR-010-codebase-simplification.md)；Linux 分发形态见 [ADR-011](docs/ADR-011-linux-pacman-aur-distribution.md) 及其[契约](docs/aur-package-contract.md)、[计划](docs/aur-package-plan.md)；Linux 全屏放映的 Esc 通路见 [ADR-012](docs/ADR-012-presentation-fullscreen-focus.md)。当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
+- 当前正式重发证据见 [正式发布验收](docs/formal-release-verification.md)；[跨平台预发布验收](docs/cross-platform-release-verification.md) 保留历史记录；pacman 包与 AUR 的本地验收见 [pacman 与 AUR 验收](docs/aur-package-verification.md)。后续验证或用户决策改变时更新相关文档，不重复固化已过期结论。

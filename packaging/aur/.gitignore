@@ -1,4 +1,5 @@
 /src/
 /pkg/
+/pagein-git/
 /.SRCINFO
 /*.pkg.tar.*
