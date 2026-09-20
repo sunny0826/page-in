@@ -5,6 +5,7 @@ mod dialogs;
 mod document;
 mod export;
 mod open_requests;
+mod preview;
 mod project;
 mod resources;
 mod state;
@@ -26,6 +27,7 @@ use tauri::{Emitter, Manager};
 fn main() {
     let shared: Shared = Arc::new(Mutex::new(None));
     let resources = shared.clone();
+    let previews = shared.clone();
     let mut requests = open_requests::OpenRequests::default();
     if let Ok(cwd) = std::env::current_dir() {
         let _ = requests.push(open_requests::argument_paths(std::env::args(), &cwd));
@@ -45,6 +47,26 @@ fn main() {
             );
         }))
         .plugin(tauri_plugin_dialog::init())
+        .register_uri_scheme_protocol("pagein-preview", move |_ctx, request| {
+            let bytes = (|| {
+                let path = request.uri().path().trim_start_matches('/');
+                let (token, filename) = path.split_once('/')?;
+                if filename != "index.html" {
+                    return None;
+                }
+                let lock = previews.lock().ok()?;
+                let session = lock.as_ref()?;
+                session.preview.as_ref()?.read(token, session.revision)
+            })();
+            tauri::http::Response::builder()
+                .status(if bytes.is_some() { 200 } else { 403 })
+                .header("Content-Type", "text/html; charset=utf-8")
+                .header("Content-Security-Policy", preview::CSP)
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Cache-Control", "no-store")
+                .body(bytes.unwrap_or_default())
+                .unwrap()
+        })
         .register_uri_scheme_protocol("pagein-resource", move |_ctx, request| {
             let result = (|| -> Result<(Vec<u8>, &str), String> {
                 let uri = request.uri().path().trim_start_matches('/');
@@ -91,7 +113,8 @@ fn main() {
             redo_edit,
             export_document,
             close_application,
-            frontend_ready
+            frontend_ready,
+            preview::prepare_preview
         ])
         .build(tauri::generate_context!())
         .expect("error building PageIn")

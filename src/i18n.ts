@@ -108,7 +108,7 @@ const messages = {
   parse: ["文件解析耗时", "Parsing time"],
   startup: ["本次启动耗时", "This launch"],
   sandbox: ["页面隔离", "Page isolation"],
-  sandboxBody: ["原文件脚本已禁用", "Original scripts are disabled"],
+  sandboxBody: ["报告脚本隔离运行 · 编辑画面冻结", "Report scripts run in isolation · Editing uses a frozen view"],
   engine: ["浏览器引擎", "Browser engine"],
   hint: ["双击文字开始编辑", "Double-click text to edit"],
   done: ["完成", "Done"],
@@ -132,6 +132,7 @@ const messages = {
     "Parsing timed out. The original file is unchanged.",
   ],
   renderTimeout: ["页面渲染超时", "The page took too long to render."],
+  liveCaptureFailed: ["暂时无法进入编辑，页面仍可预览，请重试", "Could not enter editing. The live page is still available; please retry."],
   frameUnavailable: ["无法访问页面内容", "The page content is unavailable."],
   support: ["文件已打开 · 支持范围", "File opened · Compatibility"],
   mapping: [

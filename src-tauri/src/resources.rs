@@ -29,6 +29,8 @@ pub fn resolve(root: &Path, encoded: &str) -> Result<(PathBuf, &'static str), St
         .to_lowercase();
     let mime = match ext.as_str() {
         "css" => "text/css",
+        "js" | "mjs" => "text/javascript",
+        "json" => "application/json",
         "png" => "image/png",
         "jpg" | "jpeg" => "image/jpeg",
         "gif" => "image/gif",
@@ -56,6 +58,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         fs::write(dir.path().join("a.css"), "body{}").unwrap();
         fs::write(dir.path().join("a.html"), "<h1>x</h1>").unwrap();
+        fs::write(dir.path().join("a.js"), "draw()").unwrap();
+        fs::write(dir.path().join("a.json"), "{}").unwrap();
+        assert_eq!(resolve(dir.path(), "a.js").unwrap().1, "text/javascript");
+        assert_eq!(resolve(dir.path(), "a.json").unwrap().1, "application/json");
         assert_eq!(resolve(dir.path(), "a.css").unwrap().1, "text/css");
         for p in ["../a.css", "%2e%2e/a.css", "/a.css", "..%5Ca.css", "a.html"] {
             assert!(resolve(dir.path(), p).is_err(), "{p}");

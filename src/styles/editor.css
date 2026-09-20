@@ -1,4 +1,4 @@
-#page {
+#page, #live-page {
   position: fixed;
   inset: var(--titlebar-height) 0 0;
   display: block;
