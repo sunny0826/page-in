@@ -6,7 +6,7 @@
 
 | 阶段 | 依赖 | 文件与交付                                                                                          | 验收                                                     |
 | ---- | ---- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| T0   | 无   | ADR-011、本契约、本计划、AGENTS.md                                                                  | 范围冻结；相对链接、格式与 whitespace 检查               |
+| T0   | 无   | ADR-013、本契约、本计划、AGENTS.md                                                                  | 范围冻结；相对链接、格式与 whitespace 检查               |
 | T1   | T0   | `packaging/aur/PKGBUILD`、`packaging/linux/pagein.desktop`、`packaging/aur/.gitignore` 等打包资产    | PKGBUILD 通过 `bash -n` 与 `makepkg --printsrcinfo`；桌面文件字段完整 |
 | T2   | T1   | 系统工具链构建（无源码改动，仅记录版本与耗时）                                                      | 门 A：`npm run check`、fmt、Clippy、`tauri build --no-bundle` |
 | T3   | T2   | `makepkg` 出包与包校验                                                                              | 门 B：namcap 无 error；`depends` 与文件清单经实测校准     |
@@ -33,4 +33,4 @@
 
 ## 当前结果
 
-T0–T5 完成：ADR-011、契约、计划已落盘；`packaging/aur/` 提供 PKGBUILD 与桌面文件；门 A 通过；干净 chroot 出包成功并通过 namcap；Omarchy 桌面实测覆盖安装、启动、文件关联、窗口类、编辑链路、撤销重做、单文件导出、BOM/CRLF 导出、项目导出与未导出确认。放映态 Esc 无法退出的缺陷已按 [ADR-012](ADR-012-presentation-fullscreen-focus.md) 修复并实机验证，但该修复尚未推送上游，`pagein-git` 从 `main` HEAD 构建，包内暂不含此修复。T6（AUR 提交与 `yay -S pagein-git` 复装）待用户 AUR 账号与密钥，尚未执行。证据与未验证事项见[验收记录](aur-package-verification.md)。
+T0–T5 完成：ADR-013、契约、计划已落盘；`packaging/aur/` 提供 PKGBUILD 与桌面文件；门 A 通过；干净 chroot 出包成功并通过 namcap；Omarchy 桌面实测覆盖安装、启动、文件关联、窗口类、编辑链路、撤销重做、单文件导出、BOM/CRLF 导出、项目导出与未导出确认。放映态 Esc 无法退出的缺陷已按 [ADR-012](ADR-012-presentation-fullscreen-focus.md) 修复并实机验证，修复随本 PR 进入 `main`。T6（AUR 提交与 `yay -S pagein-git` 复装）待 AUR 开放注册，尚未执行。证据与未验证事项见[验收记录](aur-package-verification.md)。

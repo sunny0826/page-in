@@ -1,6 +1,6 @@
 # pacman 包与 AUR pagein-git 验收
 
-日期：2026-09-20。依据 [ADR-011](ADR-011-linux-pacman-aur-distribution.md)、[契约](aur-package-contract.md)与[计划](aur-package-plan.md)。
+日期：2026-09-20。依据 [ADR-013](ADR-013-linux-pacman-aur-distribution.md)、[契约](aur-package-contract.md)与[计划](aur-package-plan.md)。
 
 ## 环境
 
@@ -43,7 +43,11 @@ Omarchy（Arch，x86_64），Hyprland 0.56.2，Wayland 会话，glibc 2.44+r24�
 
 未通过 / 已修复：
 
-- **放映态下 Esc 未退出**（已修复）：全屏放映后页面完全收不到键盘事件（窗口级键盘与指针正常），Esc 无法退出且只能重启恢复。按 [ADR-012](ADR-012-presentation-fullscreen-focus.md) 采用 Linux 专用原生菜单项「退出放映」绑定 Esc、仅在全屏时启用，Rust 发 `exit-presentation` 事件、前端只在放映态退出。修复后实测：F5 进入全屏后 Esc 退出并恢复窗口与进入前的编辑状态，窗口模式下 Esc 取消编辑未回归。**注意**：本修复尚未推送上游，`pagein-git` 从 `main` HEAD 构建，因此当前 AUR 路径构建出的包还不包含该修复。
+- **放映态下 Esc 未退出**（已修复）：全屏放映后页面完全收不到键盘事件（窗口级键盘与指针正常），Esc 无法退出且只能重启恢复。按 [ADR-012](ADR-012-presentation-fullscreen-focus.md) 采用 Linux 专用原生菜单项「退出放映」绑定 Esc、仅在全屏时启用，Rust 发 `exit-presentation` 事件、前端只在放映态退出。修复后实测：F5 进入全屏后 Esc 退出并恢复窗口与进入前的编辑状态，窗口模式下 Esc 取消编辑未回归。修复随本 PR 进入 `main`；此前由 `main` HEAD 构建的本地包不含该修复，需在合并后重建。
+
+## Rebase 复验
+
+分支 rebase 到含 ADR-011（isolated live reports）的最新 `main` 后重新构建并复验：`version:check`、类型检查、74 项前端测试（原 69 项，新增 live report 用例）、17 项 Rust 测试、`fmt`、Clippy 与 `tauri build --no-bundle` 全部通过；Omarchy 上重跑编辑与导出（`slowly.` → `page`，导出 383 字节与期望逐字节一致、`<title>` 中同名文字保持不变）以及 F5 进入全屏后 Esc 退出，均通过。chroot 包校验与其余桌面用例未在 rebase 后重跑，结论仍基于 rebase 前的构建。
 
 ## 未验证事项
 
@@ -55,7 +59,7 @@ Omarchy（Arch，x86_64），Hyprland 0.56.2，Wayland 会话，glibc 2.44+r24�
 
 ## AUR 状态
 
-尚未提交。仓库内 `packaging/aur/` 保存 PKGBUILD、`pagein.desktop` 与 `.gitignore`；`.SRCINFO` 需在提交前用 `makepkg --printsrcinfo` 生成。本机 `~/.ssh` 无 AUR 密钥，需要用户注册/登录 AUR 账号并添加公钥后才能推送。AUR 提交是对外发布行为，按契约在本地安装与桌面验收、干净 chroot 构建通过后进行；本页记录的是提交前的本地验收状态。
+尚未提交：AUR 当前关闭注册，用户决定等开放注册后再进行发布。仓库内 `packaging/aur/` 保存 PKGBUILD、`pagein.desktop` 与 `.gitignore`；`.SRCINFO` 需在提交前用 `makepkg --printsrcinfo` 生成。本机 `~/.ssh` 无 AUR 密钥，注册开放后需要添加公钥才能推送。AUR 提交是对外发布行为，按契约在本地安装与桌面验收、干净 chroot 构建通过后进行；本页记录的是提交前的本地验收状态。
 
 ## 与 AppImage 分发的差异
 

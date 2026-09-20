@@ -1,4 +1,4 @@
-# ADR-011：Linux 分发改为 pacman 包与 AUR pagein-git
+# ADR-013：Linux 分发改为 pacman 包与 AUR pagein-git
 
 日期：2026-09-20。状态：已决策，待实施。
 

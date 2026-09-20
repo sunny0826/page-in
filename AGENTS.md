@@ -39,7 +39,7 @@ Linux 打包使用 `packaging/aur/PKGBUILD`（T1 落地），在干净 chroot �
 
 - 使用 Tauri 2 + Rust + 系统 WebView；React / Base UI 负责应用外壳。保持单窗口、一个原生 WebView，不引入 Electron/CEF、Node 运行时或常驻本地服务。开发期 Vite 服务不属于发布运行时。
 - `src/shell.tsx` 通过 `src/ui-state.ts` 的状态快照和动作回调连接引擎；`src/main.ts` 协调会话和 IPC 队列，`src/input-surface.ts` 管理输入事务，`src/document-frame.ts` 负责 iframe 解析与映射，`src/keyboard.ts` 解析快捷键意图。React 不接管用户文档 DOM，不直接操作原生文件。
-- 用户文档是不可信内容。2026-09-20 用户要求报告与浏览器一致展示，报告预览按 [ADR-011](docs/ADR-011-isolated-live-reports.md) 在独立 `pagein-preview` 来源、仅 `sandbox="allow-scripts"` 的不透明 iframe 中执行本地脚本；不得同时授予 `allow-same-origin`，不得接触父页面或原生 IPC。编辑仍使用仅 `sandbox="allow-same-origin"` 的静态 iframe：冻结已渲染 HTML / Canvas 后重新净化，仅映射已验证的原始文字，生成内容只读。快照仅用于显示，绝不用于注册源文件或导出。原有 PPT 仍使用可信父页面适配器。
+- 用户文档是不可信内容。2026-09-20 用户要求报告与浏览器一致展示，报告预览按 [ADR-013](docs/ADR-011-isolated-live-reports.md) 在独立 `pagein-preview` 来源、仅 `sandbox="allow-scripts"` 的不透明 iframe 中执行本地脚本；不得同时授予 `allow-same-origin`，不得接触父页面或原生 IPC。编辑仍使用仅 `sandbox="allow-same-origin"` 的静态 iframe：冻结已渲染 HTML / Canvas 后重新净化，仅映射已验证的原始文字，生成内容只读。快照仅用于显示，绝不用于注册源文件或导出。原有 PPT 仍使用可信父页面适配器。
 - 资源仅限用户授权目录中的允许类型（含本地 JS / MJS / JSON），规范化路径并检查越界；不提供任意路径读取、通用代理或默认远程资源加载。报告预览响应须强制 CSP 不透明脚本沙箱，校验预览 token 和 revision；快照限制为 16 MiB / 50,000 节点。
 - 原位输入使用可信父页面的命中层和输入层；复制计算样式时必须排除 `-webkit-user-modify`，防止 WKWebView 输入变为只读。临时输入层、分页样式和包装标记不得进入导出。
 - 演示翻页只改变临时展示状态，不修改文档修订号。保留输入法组合期、Enter/Esc、撤销/重做及模态弹窗的焦点和快捷键边界。
@@ -73,7 +73,7 @@ Linux 打包使用 `packaging/aur/PKGBUILD`（T1 落地），在干净 chroot �
 - 已发布标签、安装包及源码来源必须一致；默认不移动已发布标签。2026-09-18 用户明确授权本次 v0.0.1 使用当前源码替换旧标签及全部安装包，单次例外按 [ADR-008](docs/ADR-008-v0.0.1-formal-release.md) 执行，必须备份旧发布、记录完整源码 SHA 并披露替换事实，不推广为后续发布的默认规则。
 - **0.0.1 按用户授权正式重发**：提供 macOS arm64 DMG/ZIP、Windows x64 NSIS `.exe`、Linux x64 AppImage 和 `.deb`。Omarchy 使用 AppImage；`.deb` 仅用于 Debian/Ubuntu，不代表扩大 Linux 实机支持承诺。
 - 0.0.1 当前分发以 ADR-008 为准，ADR-007 保留历史预发布依据。正式发布状态不等于跨平台实机验收，Windows / Omarchy 桌面验证仍由用户后续执行，未获得实际证据前不得标记已验收。
-- **Linux 分发形态自 2026-09-20 起改为 pacman 包与 AUR `pagein-git`**：本机 `makepkg` 出包并在 Omarchy 实机验收，AUR 只提交 PKGBUILD 与 `.SRCINFO`，不提交二进制；AppImage / deb 不再作为后续 Linux 分发形态，v0.0.1 已发布附件保持不动。详见 [ADR-011](docs/ADR-011-linux-pacman-aur-distribution.md)。
+- **Linux 分发形态自 2026-09-20 起改为 pacman 包与 AUR `pagein-git`**：本机 `makepkg` 出包并在 Omarchy 实机验收，AUR 只提交 PKGBUILD 与 `.SRCINFO`，不提交二进制；AppImage / deb 不再作为后续 Linux 分发形态，v0.0.1 已发布附件保持不动。详见 [ADR-013](docs/ADR-013-linux-pacman-aur-distribution.md)。
 - 本地 pacman 包是验收件而非分发件。`pagein-git` 跟随上游 `main` HEAD、`pkgver` 由 git 派生，不代表任何正式版本，不得描述为已发布版本；仓库版本号在正式发版前保持 0.0.1。
 - AUR 提交是对外发布行为，只在本地安装与桌面验收、干净 chroot 构建均通过后进行；提交后须用 `yay -S pagein-git` 复装验证。
 - 平台附件附独立安装说明、第三方声明、manifest 和 SHA-256；保留其他平台已有校验清单，区分已签名、ad-hoc 与未签名状态。校验通过不等于代码签名、公证或目标系统启动成功。
@@ -84,5 +84,5 @@ Linux 打包使用 `packaging/aur/PKGBUILD`（T1 落地），在干净 chroot �
 
 - 项目设计记忆：`8af00702-1ed3-4754-bad5-bf67058df626`（2026-09-18 的 UI 约束与 token 结构）；导入模型记忆：`6120a6b2-817b-49e5-9c01-3781f1615f0f`。
 - mise 长期约束记忆：`45b1eedf-9af9-41c3-859a-b6acfbb5b0d2`；RTK 规则继承用户级 `AGENTS.md`。
-- 代码模块职责与共享操作见 [ADR-010](docs/ADR-010-codebase-simplification.md)；Linux 分发形态见 [ADR-011](docs/ADR-011-linux-pacman-aur-distribution.md) 及其[契约](docs/aur-package-contract.md)、[计划](docs/aur-package-plan.md)；Linux 全屏放映的 Esc 通路见 [ADR-012](docs/ADR-012-presentation-fullscreen-focus.md)。当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
+- 代码模块职责与共享操作见 [ADR-010](docs/ADR-010-codebase-simplification.md)；Linux 分发形态见 [ADR-013](docs/ADR-013-linux-pacman-aur-distribution.md) 及其[契约](docs/aur-package-contract.md)、[计划](docs/aur-package-plan.md)；Linux 全屏放映的 Esc 通路见 [ADR-012](docs/ADR-012-presentation-fullscreen-focus.md)。当前实现边界依次参考 [ADR-002](docs/ADR-002-t1-spike.md)、[ADR-003](docs/ADR-003-webkit-input-surface.md)、[ADR-004](docs/ADR-004-base-ui-shell.md)、[ADR-005](docs/ADR-005-html-presentation-projects.md) 和 [ADR-007](docs/ADR-007-cross-platform-prerelease.md)。[架构契约](docs/architecture-contract.md) 中仍有长期设计，阅读时必须结合后续 ADR 的范围收敛与替代说明。
 - 当前正式重发证据见 [正式发布验收](docs/formal-release-verification.md)；[跨平台预发布验收](docs/cross-platform-release-verification.md) 保留历史记录；pacman 包与 AUR 的本地验收见 [pacman 与 AUR 验收](docs/aur-package-verification.md)。后续验证或用户决策改变时更新相关文档，不重复固化已过期结论。

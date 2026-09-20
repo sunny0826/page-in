@@ -1,6 +1,6 @@
 # pacman 与 AUR 分发契约
 
-依据 [ADR-011](ADR-011-linux-pacman-aur-distribution.md)，替代 [正式发布契约](formal-release-contract.md) 中 Linux 产物条款。
+依据 [ADR-013](ADR-013-linux-pacman-aur-distribution.md)，替代 [正式发布契约](formal-release-contract.md) 中 Linux 产物条款。
 
 ## 冻结约定
 
