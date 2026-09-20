@@ -16,12 +16,14 @@ Omarchy（Arch，x86_64），Hyprland 0.56.2，Wayland 会话，glibc 2.44+r24�
 
 | 文件                                          | 字节数    | 说明                          |
 | --------------------------------------------- | --------- | ----------------------------- |
-| pagein-git-0.0.1.r5.g742f45f3-1-x86_64.pkg.tar.zst | 2,185,272 | 压缩 2.08 MiB，安装后 5.66 MiB |
-| pagein-git-debug-…-x86_64.pkg.tar.zst         | 13,351,452 | makepkg 默认生成的调试包，不对外分发 |
+| pagein-git-0.0.1.r12.gfc20d01b-1-x86_64.pkg.tar.zst | 2,230,870 | 压缩 2.13 MiB，安装后 5.71 MiB；含 live report 与 Esc 修复 |
+| pagein-git-debug-…-x86_64.pkg.tar.zst         | 13,354,665 | makepkg 默认生成的调试包，不对外分发 |
+
+早先的 `0.0.1.r5.g742f45f3-1` 包（2,185,272 字节）为修复前构建，已被上表版本取代并删除。
 
 `pacman -Qip`：`Depends On: gtk3 webkit2gtk-4.1`，`Provides: pagein`，`Conflicts With: pagein`，`Licenses: MIT`。`pacman -Ql` 仅包含 `/usr/bin/pagein`、`/usr/share/applications/pagein.desktop`、5 档 hicolor 图标与 `/usr/share/licenses/pagein-git/LICENSE`。
 
-体积对比：v0.0.1 的 Linux AppImage 为 79,866,360 字节，本包为 2,185,272 字节。
+体积对比：v0.0.1 的 Linux AppImage 为 79,866,360 字节，本包为 2,230,870 字节。
 
 ## Omarchy 桌面实测
 
@@ -48,6 +50,10 @@ Omarchy（Arch，x86_64），Hyprland 0.56.2，Wayland 会话，glibc 2.44+r24�
 ## Rebase 复验
 
 分支 rebase 到含 ADR-011（isolated live reports）的最新 `main` 后重新构建并复验：`version:check`、类型检查、74 项前端测试（原 69 项，新增 live report 用例）、17 项 Rust 测试、`fmt`、Clippy 与 `tauri build --no-bundle` 全部通过；Omarchy 上重跑编辑与导出（`slowly.` → `page`，导出 383 字节与期望逐字节一致、`<title>` 中同名文字保持不变）以及 F5 进入全屏后 Esc 退出，均通过。chroot 包校验与其余桌面用例未在 rebase 后重跑，结论仍基于 rebase 前的构建。
+
+## 打包版本复验
+
+PR #3 合并后用合并后的 `main`（`fc20d01`）重跑干净 chroot 构建，得到 `pagein-git-0.0.1.r12.gfc20d01b-1`，namcap 仅报传递满足提示。`pacman -U` 安装后实测：F5 进入原生全屏（`fullscreen: 2`）后 Esc 退出并恢复窗口（`fullscreen: 0`、749×400）；编辑链路（双击命中、Ctrl+A、逐键输入、Enter 提交）正常；导出 `slowly.` → `page` 的文件 383 字节，与期望逐字节一致且 `<title>` 内同名文字未变。此前的 69 项前端测试在 rebase 后为 74 项，其余自动检查结论不变。
 
 ## 未验证事项
 
