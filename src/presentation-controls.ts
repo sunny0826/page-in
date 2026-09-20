@@ -4,9 +4,10 @@ import { getUI, updateUI } from './ui-state.ts';
 import { t } from './i18n.ts';
 import type { preparePresentation } from './presentation.ts';
 
-export function createPresentationControls(frame: HTMLIFrameElement, surface: HTMLElement, options: {
+export function createPresentationControls(surface: HTMLElement, options: {
+  previewFrame: () => HTMLIFrameElement;
   presentation: () => ReturnType<typeof preparePresentation>;
-  editing: () => boolean; setMode: (value: boolean) => void; hasDocument: () => boolean;
+  editing: () => boolean; setMode: (value: boolean) => Promise<void>; hasDocument: () => boolean;
   finish: () => Promise<void>; enqueue: <T>(action: () => Promise<T>) => Promise<T>;
   error: (error: unknown) => void;
 }) {
@@ -27,16 +28,16 @@ export function createPresentationControls(frame: HTMLIFrameElement, surface: HT
       throw new Error(t('fullscreenTimeout'));
     },
   }, value => {
-    if (value) restoreEditing = options.editing();
     document.documentElement.classList.toggle('slideshow', value);
     updateUI({ presenting: value, presentationControls: true });
-    options.setMode(value ? false : restoreEditing);
+    if (value) void options.setMode(false).catch(options.error);
+    else void options.enqueue(() => options.setMode(restoreEditing)).catch(options.error);
     clearTimeout(controlsTimer);
     if (value) revealPresentationControls();
     requestAnimationFrame(() => {
       if (value) {
         if (options.presentation()) surface.focus({ preventScroll: true });
-        else frame.contentWindow?.focus();
+        else options.previewFrame().contentWindow?.focus();
       } else {
         document.querySelector<HTMLButtonElement>(`.titlebar button[aria-label="${t('present')}"]`)?.focus();
       }
@@ -52,7 +53,8 @@ export function createPresentationControls(frame: HTMLIFrameElement, surface: HT
   async function startSlideshow() {
     if (!options.hasDocument() || getUI().busy || getUI().presenting || getUI().dialog || getUI().settingsOpen) return;
     await options.finish();
-    await options.enqueue(() => slideshow.enter());
+    restoreEditing = options.editing();
+    await options.enqueue(async () => { await options.setMode(false); await slideshow.enter(); });
   }
   function exitSlideshow() { return options.enqueue(() => slideshow.exit()); }
 

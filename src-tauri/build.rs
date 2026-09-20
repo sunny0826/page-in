@@ -14,6 +14,7 @@ fn main() {
             "export_document",
             "close_application",
             "frontend_ready",
+            "prepare_preview",
         ]),
     ))
     .expect("tauri build failed");

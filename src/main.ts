@@ -9,6 +9,7 @@ import { createOpenRequestPump } from './open-request-pump.ts';
 import './scrollbars.css';
 import { parseInWorker, mapElements, loadFrame } from './document-frame.ts';
 import { preparePresentation } from './presentation.ts';
+import { createLivePreview } from './live-preview.ts';
 import { createPresentationControls } from './presentation-controls.ts';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -21,10 +22,12 @@ document.documentElement.classList.toggle('macos', /Mac/.test(navigator.platform
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const frame = $<HTMLIFrameElement>('page');
+const liveFrame = $<HTMLIFrameElement>('live-page');
 const surface = $('input-surface');
 function syncLocale() {
   document.documentElement.lang = getLocale() === 'zh' ? 'zh-CN' : 'en';
   frame.title = t('htmlPage');
+  liveFrame.title = t('htmlPage');
 }
 syncLocale();
 subscribeLocale(syncLocale);
@@ -41,6 +44,11 @@ let noticeTimer = 0;
 let parseMs = 0;
 let startupMs = 0;
 let presentation: ReturnType<typeof preparePresentation> = null;
+let liveScroll = { x: 0, y: 0 };
+const live = createLivePreview(liveFrame, {
+  escape: () => { if (getUI().presenting) void controls.exit().catch(notice); },
+  pointer: () => controls.reveal(),
+});
 const input = createInputSurface(frame, surface, {
   slideWheel: event => controls.wheel(event),
   canEdit: () => editing && !switchingDocument,
@@ -52,7 +60,8 @@ const input = createInputSurface(frame, surface, {
   }))),
   settled: () => pipeline, changed: update, error: notice,
 });
-const controls = createPresentationControls(frame, surface, {
+const controls = createPresentationControls(surface, {
+  previewFrame: () => live.active ? liveFrame : frame,
   presentation: () => presentation, editing: () => editing, setMode,
   hasDocument: () => !!opened, finish: () => input.finish(), enqueue, error: notice,
 });
@@ -79,7 +88,27 @@ function sync(next: SessionView) {
   }
   update();
 }
-function setMode(value: boolean) {
+async function setMode(value: boolean) {
+  if (parsed?.live && opened) {
+    const { buildLiveDocument, mapLiveElements } = await import('./live-document.ts');
+    if (value && live.active) {
+      const snapshot = await live.capture();
+      const clean = await parseInWorker(snapshot.html, opened.resourceBase);
+      const doc = await loadFrame(frame, clean.html);
+      elements = mapLiveElements(doc, parsed.entries, view.texts);
+      attachDocumentEvents(doc);
+      liveScroll = { x: snapshot.x, y: snapshot.y };
+      doc.defaultView?.scrollTo(liveScroll.x, liveScroll.y);
+      live.stop();
+    } else if (!value && !live.active) {
+      if (editing && frame.contentWindow) liveScroll = { x: frame.contentWindow.scrollX, y: frame.contentWindow.scrollY };
+      const channel = crypto.randomUUID();
+      const html = buildLiveDocument(opened.source, opened.resourceBase, parsed.entries, view.texts, channel, liveScroll);
+      const url = await invoke<string>('prepare_preview', { sessionId: opened.sessionId, expectedRevision: view.revision, html });
+      await live.load(url, channel);
+      frame.hidden = true;
+    }
+  }
   presentation?.setMotionEnabled(getUI().presenting && !value);
   editing = value;
   surface.hidden = !value && !presentation;
@@ -87,6 +116,13 @@ function setMode(value: boolean) {
   if (presentation) surface.focus({ preventScroll: true });
   updateUI({ editing: value, notice: null });
   clearTimeout(noticeTimer);
+}
+function attachDocumentEvents(doc: Document) {
+  doc.addEventListener('dragover', preventFileDrop);
+  doc.addEventListener('drop', preventFileDrop);
+  doc.addEventListener('keydown', keyboard);
+  doc.addEventListener('wheel', controls.wheel, { passive: false });
+  doc.addEventListener('pointermove', controls.reveal);
 }
 // Native drop owns file access; never let the browser navigate to a dropped file.
 function preventFileDrop(event: DragEvent) {
@@ -111,28 +147,28 @@ async function open(command: 'open_document' | 'open_project' | 'open_sample' | 
       try {
         const start = performance.now();
         const result = await parseInWorker(next.source, next.resourceBase);
+        // The bundled editing demo also serves as a script-stripping fixture.
+        if (command === 'open_sample') result.live = false;
         parseMs = performance.now() - start;
         const registered = await invoke<SessionView>('register_manifest', { sessionId: next.sessionId, entries: result.entries });
         activated = true;
         presentation?.dispose();
+        live.stop(); liveScroll = { x: 0, y: 0 };
         opened = next; parsed = result;
         const doc = await loadFrame(frame, result.html);
         elements = mapElements(doc, result.entries);
         const mapFailures = result.entries.length - elements.size;
         sync(registered);
         presentation = preparePresentation(doc);
-        doc.addEventListener('dragover', preventFileDrop);
-        doc.addEventListener('drop', preventFileDrop);
-        doc.addEventListener('keydown', keyboard);
-        doc.addEventListener('wheel', controls.wheel, { passive: false });
-        doc.addEventListener('pointermove', controls.reveal);
-        updateUI({ filename: next.filename, documentFormat: result.format, project: next.project, slideIndex: 0, slideCount: presentation?.slides.length ?? 0 }); setMode(false);
+        attachDocumentEvents(doc);
+        updateUI({ filename: next.filename, documentFormat: result.format, project: next.project, slideIndex: 0, slideCount: presentation?.slides.length ?? 0 }); await setMode(false);
         if (result.warnings.length || mapFailures) showDialog(t('support'), [...result.warnings.map(localizeError), ...(mapFailures ? [t('mapping', { count: mapFailures })] : [])].join('\n'), [{ label: t('preview'), icon: 'eye', action: closeDialog }]);
       } catch (error) {
         if (!activated) throw error; // Reading or parsing failure keeps the active document intact.
         // The native session changed; never keep an old page attached to its resource token.
         input.clear(); surface.hidden = true; opened = null; parsed = null; elements.clear(); frame.srcdoc = ''; frame.hidden = true;
         presentation?.dispose(); presentation = null;
+        live.stop();
         editing = false; updateUI({ filename: null, documentFormat: null, project: false, slideCount: 0, slideIndex: 0, editing: false });
         view = emptySession();
         throw error;
@@ -195,8 +231,8 @@ mountShell({
   previousSlide: () => { if (presentation) void controls.go(presentation.index - 1).catch(notice); },
   nextSlide: () => { if (presentation) void controls.go(presentation.index + 1).catch(notice); },
   sample: () => { void open('open_sample').catch(notice); },
-  edit: () => setMode(true),
-  preview: () => { void input.finish().then(() => setMode(false)).catch(notice); },
+  edit: () => { void enqueue(() => setMode(true)).catch(notice); },
+  preview: () => { void input.finish().then(() => enqueue(() => setMode(false))).catch(notice); },
   present: () => { void controls.enter().catch(notice); },
   exitPresentation: () => { void controls.exit().catch(notice); },
   exportFile: () => { void exportFile().catch(notice); },

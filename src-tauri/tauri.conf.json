@@ -12,7 +12,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' pagein-resource: http://pagein-resource.localhost; img-src 'self' data: pagein-resource: http://pagein-resource.localhost; font-src 'self' data: pagein-resource: http://pagein-resource.localhost; frame-src 'self' about:; connect-src ipc: http://ipc.localhost; worker-src 'self'; object-src 'none'; base-uri 'self' pagein-resource: http://pagein-resource.localhost",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' pagein-resource: http://pagein-resource.localhost; img-src 'self' data: pagein-resource: http://pagein-resource.localhost; font-src 'self' data: pagein-resource: http://pagein-resource.localhost; frame-src 'self' about: pagein-preview: http://pagein-preview.localhost; connect-src ipc: http://ipc.localhost; worker-src 'self'; object-src 'none'; base-uri 'self' pagein-resource: http://pagein-resource.localhost",
       "capabilities": [
         "main"
       ]

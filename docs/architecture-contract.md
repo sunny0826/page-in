@@ -1,5 +1,9 @@
 # 架构契约 v0.1
 
+## 动态报告补充（2026-09-20）
+
+[ADR-011](ADR-011-isolated-live-reports.md) 与 [动态报告契约](live-report-contract.md) 替代本文件中“所有用户脚本禁用”的预览限制：报告预览在不透明来源的独立 iframe 中执行本地脚本；编辑使用清洗后的冻结画面，仍禁用脚本。原始字节、源文本映射、Rust 补丁与资源目录授权不变。下文的静态 iframe 限制继续适用于编辑层与现有演示适配器。
+
 ## T1 UI 外壳补充（2026-09-17）
 
 依据 [ADR-004](ADR-004-base-ui-shell.md)，Base UI/React 拥有应用外壳的视图、菜单与对话框交互；依据 [ADR-010](ADR-010-codebase-simplification.md)，`main.ts` 协调打开/导出流程与 IPC 队列；输入事务由 `input-surface.ts` 管理，iframe 解析与映射由 `document-frame.ts` 管理，快捷键意图由 `keyboard.ts` 解析。两者通过 UI 状态快照与动作回调连接，UI 不直接调用原生文件或修改文档 DOM。状态至少包含 filename、editing、busy、dirty、canUndo、canRedo、activeInput、settingsOpen、dialog 与 notice。弹窗取消必须完成原有 guardUnsaved 的 Promise；模态弹窗打开时不得触发文档快捷键。

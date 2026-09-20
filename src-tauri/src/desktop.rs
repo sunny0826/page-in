@@ -69,6 +69,8 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 url.as_str() == "about:srcdoc"
                     || url.as_str() == "about:blank"
                     || url.scheme() == "tauri"
+                    || url.scheme() == "pagein-preview"
+                    || url.host_str() == Some("pagein-preview.localhost")
                     || url.host_str() == Some("tauri.localhost")
                     || (cfg!(debug_assertions)
                         && url.host_str() == Some("127.0.0.1")

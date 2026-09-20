@@ -32,6 +32,7 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
   const tree = parse(source, { sourceCodeLocationInfo: true, scriptingEnabled: true });
   const offsets = utf8Offsets(source);
   const warnings = new Set<string>();
+  let hasScripts = false;
   let base = resourceBase;
   let baseSeen = false;
   let count = 0;
@@ -39,6 +40,10 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
     for (const child of [...children(parent)]) {
       if (++count > 50000) throw new Error('最多处理 50,000 个节点');
       if (isElement(child)) {
+        if (child.tagName === 'script') {
+          const type = child.attrs.find(a => a.name === 'type')?.value.trim().toLowerCase() ?? '';
+          if (!type || type === 'module' || /^(text|application)\/(x-)?(java|ecma)script/.test(type)) hasScripts = true;
+        }
         if (child.tagName === 'meta') {
           const charset = child.attrs.find(a => a.name === 'charset')?.value;
           const contentType = child.attrs.find(a => a.name === 'http-equiv')?.value.toLowerCase() === 'content-type';
@@ -139,5 +144,5 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
     return true;
   });
   if (safe.length === 0) warnings.add('没有找到可安全编辑的纯文本元素');
-  return { format, html: serialize(tree), entries: safe, warnings: [...warnings] };
+  return { format, live: format === 'report' && hasScripts, html: serialize(tree), entries: safe, warnings: [...warnings] };
 }

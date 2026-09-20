@@ -25,9 +25,11 @@ export interface SessionView {
 }
 export interface ParsedDocument {
   format: DocumentFormat;
+  live: boolean;
   html: string;
   entries: TextEntry[];
   warnings: string[];
 }
 
 export const emptySession = (): SessionView => ({ revision: 0, texts: {}, canUndo: false, canRedo: false, dirty: false });
+export const maxSnapshotBytes = 16 * 1024 * 1024;
