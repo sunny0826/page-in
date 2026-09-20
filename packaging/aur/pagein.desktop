@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=PageIn
+Name[zh_CN]=PageIn
+GenericName=HTML Text Editor
+GenericName[zh_CN]=HTML 文字编辑器
+Comment=Edit local HTML text in place and export complete presentation projects
+Comment[zh_CN]=原位编辑本地 HTML 文字，并导出保留资源的完整演示项目
+Exec=pagein %U
+Icon=pagein
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/html;
+Keywords=HTML;Editor;Presentation;
+Keywords[zh_CN]=HTML;编辑器;演示;
+StartupNotify=true
+StartupWMClass=pagein

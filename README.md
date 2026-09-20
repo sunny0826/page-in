@@ -21,9 +21,11 @@
 
 - **macOS 13+ / Apple Silicon**：打开 DMG，将 PageIn 拖入 Applications；也可解压 ZIP 后运行。
 - **Windows x64**：运行 `.exe` 安装程序；缺少 WebView2 时安装程序会联网下载。
-- **Linux x64 / Omarchy**：下载 AppImage，使用 `chmod +x` 赋予执行权限后运行。另提供适用于 Debian/Ubuntu 的 `.deb`。
+- **Linux x64 / Omarchy**：使用 pacman 包 `pagein-git`（AUR，跟随上游 `main` HEAD）。0.0.1 正式版曾提供 AppImage 与适用于 Debian/Ubuntu 的 `.deb`，附件保留可下载，但不再作为后续 Linux 分发形态。
 
 Windows 和 Linux 包尚未完成对应系统的安装与功能实测。macOS 包尚未进行 Developer ID 签名和 Apple 公证，Windows 包未做代码签名。安装步骤与校验文件见 [0.0.1 发布说明](docs/releases/0.0.1.md)。
+
+Omarchy 上的 pacman 包已完成安装、启动、文件关联、编辑与撤销重做、单文件导出、BOM/CRLF 导出、项目导出和未导出确认的实机验收，证据与待确认项见 [pacman 与 AUR 验收](docs/aur-package-verification.md)；Windows 仍待实机验证。
 
 ## 使用
 
@@ -31,7 +33,7 @@ Windows 和 Linux 包尚未完成对应系统的安装与功能实测。macOS �
 2. 点击编辑图标，双击需要修改的文字。按 Enter 或点击空白处完成，按 Esc 取消当前输入。
 3. 点击导出图标或按 ⌘S，将修改导出到新文件或新目录。原文件和原项目保持不变。
 
-当前源码还支持系统“打开方式 → PageIn”。安装包含此功能的构建后，将 PageIn 设为 HTML 默认应用即可双击打开；应用已运行时在现有窗口打开，并提示处理未导出修改。AppImage 需完成系统桌面集成后才能注册文件关联。已发布的旧安装包不会随源码更新自动获得此功能。
+当前源码还支持系统“打开方式 → PageIn”。安装包含此功能的构建后，将 PageIn 设为 HTML 默认应用即可双击打开；应用已运行时在现有窗口打开，并提示处理未导出修改。pacman 包在安装时即注册文件关联与图标；已发布的旧安装包不会随源码更新自动获得此功能。
 
 演示项目支持通过底部浮栏、方向键、Page Up / Down、Home / End 和滚轮翻页。打开右上角设置可切换界面语言。
 
