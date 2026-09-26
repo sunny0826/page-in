@@ -7,9 +7,10 @@ type Node = DefaultTreeAdapterTypes.Node;
 type Element = DefaultTreeAdapterTypes.Element;
 const HTML_NS = html.NS.HTML;
 const blocked = new Set(['script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'base']);
-const uneditable = new Set(['head', 'script', 'style', 'textarea', 'title', 'noscript', 'template', 'select', 'option']);
+const uneditable = new Set(['head', 'script', 'style', 'textarea', 'title', 'noscript', 'template', 'select', 'option', 'xmp', 'noembed', 'noframes', 'plaintext']);
 const children = (n: Node): Node[] => 'childNodes' in n ? n.childNodes : [];
 const isElement = (n: Node): n is Element => 'tagName' in n;
+const ignoresLeadingLf = (n: Node) => isElement(n) && n.namespaceURI === HTML_NS && ['pre', 'listing'].includes(n.tagName);
 
 export function utf8Offsets(text: string): Uint32Array {
   const offsets = new Uint32Array(text.length + 1);
@@ -129,7 +130,9 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
         if (check.length === 1 && check[0].nodeName === '#text' && 'value' in check[0] && check[0].value === text.value && !raw.includes('\0')) {
           const startByte = offsets[loc.startOffset] + bom;
           const endByte = offsets[loc.endOffset] + bom;
-          entries.push({ nodeId: `${startByte}:${endByte}`, startByte, endByte, raw, originalDecoded: text.value, domPath: path, tag: n.tagName });
+          const textContext = ignoresLeadingLf(n) && n.sourceCodeLocation?.startTag?.endOffset === loc.startOffset
+            ? 'pre-leading' : 'html';
+          entries.push({ nodeId: `${startByte}:${endByte}`, startByte, endByte, raw, originalDecoded: text.value, domPath: path, tag: n.tagName, textContext });
         }
       }
     }
@@ -144,5 +147,15 @@ export function parseDocument(sourceWithBom: string, resourceBase: string): Pars
     return true;
   });
   if (safe.length === 0) warnings.add('没有找到可安全编辑的纯文本元素');
+  // Serialization drops the source LF that pre/listing consumed on first parse.
+  // Keep the preview's next parse equivalent without changing source mappings.
+  function preserveLeadingLf(n: Node) {
+    const first = children(n)[0];
+    if (ignoresLeadingLf(n) && first?.nodeName === '#text' && 'value' in first && first.value.startsWith('\n')) {
+      first.value = '\n' + first.value;
+    }
+    children(n).forEach(preserveLeadingLf);
+  }
+  preserveLeadingLf(tree);
   return { format, live: format === 'report' && hasScripts, html: serialize(tree), entries: safe, warnings: [...warnings] };
 }

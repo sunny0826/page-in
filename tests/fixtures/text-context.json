@@ -1,0 +1,487 @@
+[
+  {
+    "name": "ordinary BOM Unicode entities and unchanged CRLF",
+    "source": "﻿<!doctype html>\r\n<!--keep--><p>中文 &amp; 😀</p>\r\n<script>keep()</script>",
+    "entries": [
+      {
+        "nodeId": "34:51",
+        "startByte": 34,
+        "endByte": 51,
+        "raw": "中文 &amp; 😀",
+        "originalDecoded": "中文 & 😀",
+        "tag": "p"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\n<新> & 😀",
+        "exported": "﻿<!doctype html>\r\n<!--keep--><p>\n&lt;新&gt; &amp; 😀</p>\r\n<script>keep()</script>"
+      },
+      {
+        "text": "A\r\nB",
+        "exported": "﻿<!doctype html>\r\n<!--keep--><p>A&#13;\nB</p>\r\n<script>keep()</script>"
+      },
+      {
+        "text": "",
+        "exported": "﻿<!doctype html>\r\n<!--keep--><p></p>\r\n<script>keep()</script>"
+      }
+    ]
+  },
+  {
+    "name": "pre without ignored LF",
+    "source": "<pre>A &amp; 中😀</pre>",
+    "entries": [
+      {
+        "nodeId": "5:20",
+        "startByte": 5,
+        "endByte": 20,
+        "raw": "A &amp; 中😀",
+        "originalDecoded": "A & 中😀",
+        "tag": "pre",
+        "textContext": "pre-leading"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\n新 <&> 😀",
+        "exported": "<pre>\n\n新 &lt;&amp;&gt; 😀</pre>"
+      },
+      {
+        "text": "\n\nB",
+        "exported": "<pre>\n\n\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre>B</pre>"
+      },
+      {
+        "text": "\r\nB",
+        "exported": "<pre>&#13;\nB</pre>"
+      },
+      {
+        "text": "",
+        "exported": "<pre></pre>"
+      }
+    ]
+  },
+  {
+    "name": "listing without ignored LF",
+    "source": "<listing>A</listing>",
+    "entries": [
+      {
+        "nodeId": "9:10",
+        "startByte": 9,
+        "endByte": 10,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "listing",
+        "textContext": "pre-leading"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<listing>\n\nB</listing>"
+      },
+      {
+        "text": "B",
+        "exported": "<listing>B</listing>"
+      },
+      {
+        "text": "",
+        "exported": "<listing></listing>"
+      }
+    ]
+  },
+  {
+    "name": "pre preserves ignored LF outside patch",
+    "source": "<pre>\nA</pre>",
+    "entries": [
+      {
+        "nodeId": "6:7",
+        "startByte": 6,
+        "endByte": 7,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre>\n\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre>\nB</pre>"
+      },
+      {
+        "text": "",
+        "exported": "<pre>\n</pre>"
+      }
+    ]
+  },
+  {
+    "name": "pre preserves ignored CRLF outside patch",
+    "source": "<pre>\r\nA</pre>",
+    "entries": [
+      {
+        "nodeId": "7:8",
+        "startByte": 7,
+        "endByte": 8,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre>\r\n\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre>\r\nB</pre>"
+      },
+      {
+        "text": "",
+        "exported": "<pre>\r\n</pre>"
+      }
+    ]
+  },
+  {
+    "name": "listing preserves ignored CR outside patch",
+    "source": "<listing>\rA</listing>",
+    "entries": [
+      {
+        "nodeId": "10:11",
+        "startByte": 10,
+        "endByte": 11,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "listing",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<listing>\r&#10;B</listing>"
+      },
+      {
+        "text": "\n\nB",
+        "exported": "<listing>\r&#10;\nB</listing>"
+      },
+      {
+        "text": "B",
+        "exported": "<listing>\rB</listing>"
+      },
+      {
+        "text": "",
+        "exported": "<listing>\r</listing>"
+      }
+    ]
+  },
+  {
+    "name": "pre preserves ignored decimal LF entity",
+    "source": "<pre>&#10;A</pre>",
+    "entries": [
+      {
+        "nodeId": "10:11",
+        "startByte": 10,
+        "endByte": 11,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre>&#10;\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre>&#10;B</pre>"
+      }
+    ]
+  },
+  {
+    "name": "listing preserves ignored hex LF entity",
+    "source": "<listing>&#xA;A</listing>",
+    "entries": [
+      {
+        "nodeId": "14:15",
+        "startByte": 14,
+        "endByte": 15,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "listing",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<listing>&#xA;\nB</listing>"
+      },
+      {
+        "text": "B",
+        "exported": "<listing>&#xA;B</listing>"
+      }
+    ]
+  },
+  {
+    "name": "pre preserves ignored named LF entity",
+    "source": "<pre>&NewLine;A</pre>",
+    "entries": [
+      {
+        "nodeId": "14:15",
+        "startByte": 14,
+        "endByte": 15,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre>&NewLine;\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre>&NewLine;B</pre>"
+      }
+    ]
+  },
+  {
+    "name": "nested pre leaf has ordinary context",
+    "source": "<pre><span>A</span></pre>",
+    "entries": [
+      {
+        "nodeId": "11:12",
+        "startByte": 11,
+        "endByte": 12,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "span",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre><span>\nB</span></pre>"
+      }
+    ]
+  },
+  {
+    "name": "removed markup does not make source text pre-leading",
+    "source": "<pre><script>keep()</script>A</pre>",
+    "entries": [
+      {
+        "nodeId": "28:29",
+        "startByte": 28,
+        "endByte": 29,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre><script>keep()</script>\nB</pre>"
+      }
+    ]
+  },
+  {
+    "name": "xmp plain content is readonly",
+    "source": "<xmp>raw text</xmp>",
+    "entries": [],
+    "preview": {
+      "tag": "xmp",
+      "text": "raw text"
+    }
+  },
+  {
+    "name": "xmp entities and apparent descendants are readonly",
+    "source": "<xmp><b>raw &amp;</b></xmp>",
+    "entries": [],
+    "preview": {
+      "tag": "xmp",
+      "text": "<b>raw &amp;</b>"
+    }
+  },
+  {
+    "name": "noembed is readonly",
+    "source": "<noembed>raw text</noembed>",
+    "entries": [],
+    "preview": {
+      "tag": "noembed",
+      "text": "raw text"
+    }
+  },
+  {
+    "name": "plaintext is readonly",
+    "source": "<plaintext>raw text",
+    "entries": []
+  },
+  {
+    "name": "pre multiple leading LF stays readonly and visually stable",
+    "source": "<pre>\n\nA</pre>",
+    "entries": [],
+    "preview": {
+      "tag": "pre",
+      "text": "\nA"
+    }
+  },
+  {
+    "name": "pre multiple leading CRLF stays readonly and visually stable",
+    "source": "<pre>\r\n\r\nA</pre>",
+    "entries": [],
+    "preview": {
+      "tag": "pre",
+      "text": "\nA"
+    }
+  },
+  {
+    "name": "listing multiple leading LF stays readonly and visually stable",
+    "source": "<listing>\n\nA</listing>",
+    "entries": [],
+    "preview": {
+      "tag": "listing",
+      "text": "\nA"
+    }
+  },
+  {
+    "name": "pre entity then LF stays readonly and visually stable",
+    "source": "<pre>&#10;\nA</pre>",
+    "entries": [],
+    "preview": {
+      "tag": "pre",
+      "text": "\nA"
+    }
+  },
+  {
+    "name": "pre LF then entity stays readonly and visually stable",
+    "source": "<pre>\n&#10;A</pre>",
+    "entries": [],
+    "preview": {
+      "tag": "pre",
+      "text": "\nA"
+    }
+  },
+  {
+    "name": "multiline pre remains editable with CRLF and Unicode",
+    "source": "<pre>First\r\nSecond &amp; 😀</pre>",
+    "entries": [
+      {
+        "nodeId": "5:29",
+        "startByte": 5,
+        "endByte": 29,
+        "raw": "First\r\nSecond &amp; 😀",
+        "originalDecoded": "First\nSecond & 😀",
+        "tag": "pre",
+        "textContext": "pre-leading"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nNew\nLine",
+        "exported": "<pre>\n\nNew\nLine</pre>"
+      },
+      {
+        "text": "New\nLine",
+        "exported": "<pre>New\nLine</pre>"
+      }
+    ]
+  },
+  {
+    "name": "removed script leaves mapped leading LF in preview",
+    "source": "<pre><script>keep()</script>\nA</pre>",
+    "entries": [
+      {
+        "nodeId": "28:30",
+        "startByte": 28,
+        "endByte": 30,
+        "raw": "\nA",
+        "originalDecoded": "\nA",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre><script>keep()</script>\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre><script>keep()</script>B</pre>"
+      }
+    ]
+  },
+  {
+    "name": "pre preserves ignored CR outside patch",
+    "source": "<pre>\rA</pre>",
+    "entries": [
+      {
+        "nodeId": "6:7",
+        "startByte": 6,
+        "endByte": 7,
+        "raw": "A",
+        "originalDecoded": "A",
+        "tag": "pre",
+        "textContext": "html"
+      }
+    ],
+    "changes": [
+      {
+        "text": "\nB",
+        "exported": "<pre>\r&#10;B</pre>"
+      },
+      {
+        "text": "\n\nB",
+        "exported": "<pre>\r&#10;\nB</pre>"
+      },
+      {
+        "text": "B",
+        "exported": "<pre>\rB</pre>"
+      }
+    ]
+  },
+  {
+    "name": "noframes in body div is readonly",
+    "source": "<div><noframes>Original</noframes></div>",
+    "entries": [],
+    "preview": {
+      "tag": "noframes",
+      "text": "Original"
+    }
+  },
+  {
+    "name": "noframes displayed in body div is readonly",
+    "source": "<body><div><noframes style=\"display:block\">Original</noframes></div></body>",
+    "entries": [],
+    "preview": {
+      "tag": "noframes",
+      "text": "Original"
+    }
+  },
+  {
+    "name": "noframes displayed apparent descendants stay literal and readonly",
+    "source": "<body><div><noframes style=\"display:block\"><b>raw &amp; &#10;</b></noframes></div></body>",
+    "entries": [],
+    "preview": {
+      "tag": "noframes",
+      "text": "<b>raw &amp; &#10;</b>"
+    }
+  }
+]

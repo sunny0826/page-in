@@ -8,6 +8,7 @@ export interface TextEntry {
   originalDecoded: string;
   domPath: number[];
   tag: string;
+  textContext?: 'html' | 'pre-leading';
 }
 export interface OpenedDocument {
   sessionId: string;
