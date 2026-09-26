@@ -1,5 +1,6 @@
 import { keyAction } from './keyboard.ts';
 import { createInputSurface } from './input-surface.ts';
+import { writeMappedText } from './input-geometry.ts';
 import './style.css';
 import './styles/welcome.css';
 import './styles/editor.css';
@@ -40,6 +41,7 @@ let pipeline = Promise.resolve();
 let pending = 0;
 let switchingDocument = false;
 let composing = false;
+let compositionSequence = 0;
 let noticeTimer = 0;
 let parseMs = 0;
 let startupMs = 0;
@@ -51,13 +53,16 @@ const live = createLivePreview(liveFrame, {
 });
 const input = createInputSurface(frame, surface, {
   slideWheel: event => controls.wheel(event),
-  canEdit: () => editing && !switchingDocument,
+  canEdit: () => editing && !switchingDocument && pending === 0 && !getUI().dialog && !getUI().settingsOpen && !getUI().presenting,
+  sessionId: () => opened?.sessionId ?? null,
   entries: () => elements,
   text: entry => view.texts[entry.nodeId] ?? entry.originalDecoded,
-  commit: (entry, before, text) => enqueue(async () => sync(await invoke<SessionView>('commit_edit', {
-    sessionId: opened!.sessionId, expectedRevision: view.revision,
-    nodeId: entry.nodeId, oldText: before, newText: text,
-  }))),
+  commit: (sessionId, entry, before, text) => enqueue(async () => {
+    if (opened?.sessionId !== sessionId) throw new Error('SessionExpired');
+    sync(await invoke<SessionView>('commit_edit', {
+      sessionId, expectedRevision: view.revision, nodeId: entry.nodeId, oldText: before, newText: text,
+    }));
+  }),
   settled: () => pipeline, changed: update, error: notice,
 });
 const controls = createPresentationControls(surface, {
@@ -84,11 +89,12 @@ function sync(next: SessionView) {
   view = next;
   for (const [element, entry] of elements) {
     const text = next.texts[entry.nodeId] ?? entry.originalDecoded;
-    if (element !== input.active?.element && element.textContent !== text) element.textContent = text;
+    if (element !== input.active?.element && element.textContent !== text) writeMappedText(element, text);
   }
   update();
 }
 async function setMode(value: boolean) {
+  input.invalidateBegin();
   if (parsed?.live && opened) {
     const { buildLiveDocument, mapLiveElements } = await import('./live-document.ts');
     if (value && live.active) {
@@ -135,6 +141,7 @@ document.addEventListener('drop', event => {
 });
 async function open(command: 'open_document' | 'open_project' | 'open_sample' | 'open_requested_document' = 'open_document', requestId?: string) {
   if (switchingDocument) return;
+  input.invalidateBegin();
   switchingDocument = true; update();
   try {
     if (getUI().presenting) await controls.exit();
@@ -166,7 +173,7 @@ async function open(command: 'open_document' | 'open_project' | 'open_sample' | 
       } catch (error) {
         if (!activated) throw error; // Reading or parsing failure keeps the active document intact.
         // The native session changed; never keep an old page attached to its resource token.
-        input.clear(); surface.hidden = true; opened = null; parsed = null; elements.clear(); frame.srcdoc = ''; frame.hidden = true;
+        input.invalidateBegin(); surface.hidden = true; opened = null; parsed = null; elements.clear(); frame.srcdoc = ''; frame.hidden = true;
         presentation?.dispose(); presentation = null;
         live.stop();
         editing = false; updateUI({ filename: null, documentFormat: null, project: false, slideCount: 0, slideIndex: 0, editing: false });
@@ -199,7 +206,7 @@ async function history(command: string) { await input.finish(); await enqueue(as
 function keyboard(event: KeyboardEvent) {
   const state = getUI();
   const action = keyAction(event, {
-    blocked: switchingDocument || !!state.dialog || state.settingsOpen,
+    blocked: switchingDocument || composing || !!state.dialog || state.settingsOpen,
     presenting: state.presenting, active: !!input.active, opened: !!opened,
     inControl: event.target instanceof Element && !!event.target.closest('button, input, select, textarea, [contenteditable]'),
     slideIndex: presentation?.index ?? 0, slideCount: presentation?.slides.length ?? 0,
@@ -256,10 +263,14 @@ const openRequests = createOpenRequestPump({
 });
 let nativeOpenReady = false;
 subscribeUI(() => { if (nativeOpenReady) openRequests.wake(); });
-document.addEventListener('compositionstart', () => { composing = true; });
+document.addEventListener('compositionstart', () => { compositionSequence++; composing = true; input.setComposing(true); });
 document.addEventListener('compositionend', () => {
   // Allow the final composition input event to settle before committing text.
-  setTimeout(() => { composing = false; if (nativeOpenReady) openRequests.wake(); }, 0);
+  const sequence = compositionSequence;
+  setTimeout(() => {
+    if (sequence !== compositionSequence) return;
+    composing = false; input.setComposing(false); if (nativeOpenReady) openRequests.wake();
+  }, 0);
 });
 void (async () => {
   await listen('close-requested', () => { void closeApplication().catch(notice); });

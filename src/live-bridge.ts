@@ -56,6 +56,15 @@ export function liveBridge(config: { channel: string; scroll: { x: number; y: nu
       freeze.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}';
       copy.querySelector('head')?.append(freeze);
       copy.querySelectorAll('script').forEach(script => script.remove());
+      // HTML reparsing consumes one LF immediately after pre/listing. Restore
+      // that parser-only LF on the snapshot clone, leaving the live DOM intact.
+      for (const element of copy.querySelectorAll('pre, listing')) {
+        const first = element.firstChild;
+        if (element.namespaceURI === 'http://www.w3.org/1999/xhtml'
+          && first?.nodeType === 3 && (first as Text).data.startsWith('\n')) {
+          (first as Text).data = '\n' + (first as Text).data;
+        }
+      }
       const html = '<!doctype html>' + copy.outerHTML;
       if (new TextEncoder().encode(html).length > config.maxBytes) throw new Error('snapshot too large');
       send({ type: 'snapshot', id, html, x: scrollX, y: scrollY });
