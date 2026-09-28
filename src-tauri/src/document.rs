@@ -4,6 +4,14 @@ use std::{collections::BTreeMap, path::PathBuf};
 pub const MAX_SOURCE: usize = 5 * 1024 * 1024;
 const MAX_TEXT: usize = 1024 * 1024;
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TextContext {
+    #[default]
+    Html,
+    PreLeading,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
@@ -12,6 +20,8 @@ pub struct Entry {
     pub end_byte: usize,
     pub raw: String,
     pub original_decoded: String,
+    #[serde(default)]
+    pub text_context: TextContext,
 }
 
 #[derive(Clone, Debug)]
@@ -201,6 +211,16 @@ impl Session {
         let mut pos = 0;
         for (e, text) in entries {
             result.push_str(&self.source[pos..e.start_byte]);
+            let mut text = text.as_str();
+            if e.text_context == TextContext::PreLeading && text.starts_with('\n') {
+                result.push('\n');
+            }
+            // Preserve a source CR outside the patch without letting it combine
+            // with the replacement's first LF during HTML input preprocessing.
+            if self.source[..e.start_byte].ends_with('\r') && text.starts_with('\n') {
+                result.push_str("&#10;");
+                text = &text[1..];
+            }
             result.push_str(&escape(text));
             pos = e.end_byte;
         }
@@ -233,6 +253,7 @@ mod tests {
             end_byte: end,
             raw: raw[start..end].into(),
             original_decoded: "中文 & 😀".into(),
+            text_context: TextContext::Html,
         }])
         .unwrap();
         s
@@ -271,7 +292,8 @@ mod tests {
                 start_byte: 1,
                 end_byte: 3,
                 raw: "中".into(),
-                original_decoded: "中".into()
+                original_decoded: "中".into(),
+                text_context: TextContext::Html,
             }])
             .is_err());
     }
@@ -294,5 +316,87 @@ mod tests {
             valid_source(b"\xef\xbb\xbfhi".to_vec()).unwrap(),
             "\u{feff}hi"
         );
+    }
+
+    #[derive(Deserialize)]
+    struct TextFixture {
+        name: String,
+        source: String,
+        entries: Vec<Entry>,
+        #[serde(default)]
+        changes: Vec<TextChange>,
+    }
+
+    #[derive(Deserialize)]
+    struct TextChange {
+        text: String,
+        exported: String,
+    }
+
+    fn text_fixtures() -> Vec<TextFixture> {
+        serde_json::from_str(include_str!("../../tests/fixtures/text-context.json")).unwrap()
+    }
+
+    fn registered(fixture: &TextFixture) -> Session {
+        let mut s = Session::new(fixture.source.clone(), None, None, "fixture.html".into());
+        s.register(fixture.entries.clone()).unwrap();
+        s
+    }
+
+    #[test]
+    fn shared_text_context_fixtures_preserve_original_bytes_without_edits() {
+        for fixture in text_fixtures() {
+            let mut s = registered(&fixture);
+            assert_eq!(s.export(), fixture.source, "{}", fixture.name);
+            for entry in &fixture.entries {
+                s.commit(
+                    &entry.node_id,
+                    &entry.original_decoded,
+                    entry.original_decoded.clone(),
+                )
+                .unwrap();
+            }
+            assert_eq!(s.export(), fixture.source, "{}", fixture.name);
+            assert_eq!(s.revision, 0, "{}", fixture.name);
+            assert!(!s.view().dirty, "{}", fixture.name);
+        }
+    }
+
+    #[test]
+    fn shared_text_context_fixtures_export_and_restore_expected_bytes() {
+        for fixture in text_fixtures() {
+            for change in &fixture.changes {
+                let mut s = registered(&fixture);
+                let entry = &fixture.entries[0];
+                s.commit(&entry.node_id, &entry.original_decoded, change.text.clone())
+                    .unwrap();
+                assert_eq!(s.export(), change.exported, "{}", fixture.name);
+                assert_eq!(s.source, fixture.source, "{}", fixture.name);
+                s.undo();
+                assert_eq!(s.export(), fixture.source, "{}", fixture.name);
+                assert!(s.patches.is_empty(), "{}", fixture.name);
+                s.redo();
+                assert_eq!(s.export(), change.exported, "{}", fixture.name);
+                s.commit(&entry.node_id, &change.text, entry.original_decoded.clone())
+                    .unwrap();
+                assert_eq!(s.export(), fixture.source, "{}", fixture.name);
+                assert!(s.patches.is_empty(), "{}", fixture.name);
+            }
+        }
+    }
+
+    #[test]
+    fn text_context_defaults_to_html_and_rejects_unknown_values() {
+        let value = serde_json::json!({
+            "nodeId": "5:6", "startByte": 5, "endByte": 6,
+            "raw": "A", "originalDecoded": "A"
+        });
+        let entry: Entry = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(entry.text_context, TextContext::Html);
+        for unknown in [serde_json::json!("raw-text"), serde_json::Value::Null] {
+            let mut invalid = value.clone();
+            invalid["textContext"] = unknown;
+            assert!(serde_json::from_value::<Entry>(invalid).is_err());
+        }
     }
 }

@@ -30,6 +30,7 @@ Linux 打包使用 `packaging/aur/PKGBUILD`（T1 落地），在干净 chroot �
 - 系统文件关联和窗口拖放支持单个 `.html` / `.htm`，均走单文件模式与未导出确认；原生请求由 Rust 排队并签发 ID，前端不得传任意路径。系统关联不强制修改默认应用，单实例启动复用现有窗口。详见 [ADR-009](docs/ADR-009-native-file-open.md)。
 - 原始字节不可变。导出只按已验证的 UTF-8 字节区间应用文字补丁，未修改区间保持逐字节一致。禁止通过 DOM 序列化、`outerHTML` 或整页重建保存内容。
 - JavaScript 的 UTF-16 offset 不等于 UTF-8 字节偏移；映射须覆盖中文、Emoji、BOM、CRLF、实体和换行标题。无法可靠映射、复杂混合或带变换的片段保持只读，不猜测回写位置。
+- xmp、noembed、noframes、plaintext 等 raw-text 上下文保持只读。pre/listing 的 `textContext` 区分是否需要首 LF 补偿；补丁外单独 CR 与新 LF 不得合并。所有编码补偿局限于已验证补丁区间，详见 [ADR-014](docs/ADR-014-edit-transaction-fidelity.md)。
 - 导出创建新文件或新目录，不覆盖原始文件、已有目标或源项目内部路径。项目模式只修改入口 HTML，其余资源和空目录保持完整；拒绝外部已修改的入口、符号链接、特殊文件和越界路径。
 - 当前限制：HTML 不超过 5 MiB / 50,000 节点；项目导出不超过 512 MiB / 10,000 个文件和目录。调整限制须同步契约、实现与验证。
 - Rust 是源文件、补丁、会话及修订号的权威。写操作校验 session/revision；界面等待核心成功确认后才显示导出成功，失败保留未导出状态。关闭或换文件须处理未导出修改。
@@ -42,6 +43,7 @@ Linux 打包使用 `packaging/aur/PKGBUILD`（T1 落地），在干净 chroot �
 - 用户文档是不可信内容。2026-09-20 用户要求报告与浏览器一致展示，报告预览按 [ADR-013](docs/ADR-011-isolated-live-reports.md) 在独立 `pagein-preview` 来源、仅 `sandbox="allow-scripts"` 的不透明 iframe 中执行本地脚本；不得同时授予 `allow-same-origin`，不得接触父页面或原生 IPC。编辑仍使用仅 `sandbox="allow-same-origin"` 的静态 iframe：冻结已渲染 HTML / Canvas 后重新净化，仅映射已验证的原始文字，生成内容只读。快照仅用于显示，绝不用于注册源文件或导出。原有 PPT 仍使用可信父页面适配器。
 - 资源仅限用户授权目录中的允许类型（含本地 JS / MJS / JSON），规范化路径并检查越界；不提供任意路径读取、通用代理或默认远程资源加载。报告预览响应须强制 CSP 不透明脚本沙箱，校验预览 token 和 revision；快照限制为 16 MiB / 50,000 节点。
 - 原位输入使用可信父页面的命中层和输入层；复制计算样式时必须排除 `-webkit-user-modify`，防止 WKWebView 输入变为只读。临时输入层、分页样式和包装标记不得进入导出。
+- input-surface 接线，input-controller、input-transaction、input-geometry 管理原位输入。清空文字仍保留映射 Text 节点；提交等待 Rust 确认后才移除输入层，失败保留草稿并允许重试或 Esc 取消。元素及祖先的独立 scale/rotate/translate 与 transform 一并检查，无法可靠对齐时保持只读。动态快照只能为唯一源 marker、tag 和确认空值匹配的元素恢复空 Text 节点。
 - 演示翻页只改变临时展示状态，不修改文档修订号。保留输入法组合期、Enter/Esc、撤销/重做及模态弹窗的焦点和快捷键边界。
 - 放映从当前页进入原生全屏，隐藏顶部栏；报告使用隔离动态预览，PPT 沿用现有翻页。Esc 退出并恢复之前的编辑/预览和全屏状态。放映本身不修改文档，快捷键不得在放映期间触发编辑历史操作；PPT 原页面脚本仍禁用。
 

@@ -58,6 +58,13 @@ export function buildLiveDocument(sourceWithBom: string, resourceBase: string, e
         }
       }
       visit(node);
+      // The serialized live preview is parsed again by the WebView. pre/listing
+      // consume one leading LF on that parse, including replacement text.
+      const first = node.childNodes[0];
+      if (node.namespaceURI === html.NS.HTML && ['pre', 'listing'].includes(node.tagName)
+        && first?.nodeName === '#text' && 'value' in first && first.value.startsWith('\n')) {
+        first.value = '\n' + first.value;
+      }
     }
   }
   visit(tree);
@@ -84,9 +91,13 @@ export function mapLiveElements(doc: Document, entries: TextEntry[], texts: Reco
     const matches = candidates.get(entry.nodeId);
     if (matches?.length !== 1) continue;
     const element = matches[0];
-    if (element.namespaceURI === html.NS.HTML && element.localName === entry.tag
-      && element.childNodes.length === 1 && element.firstChild?.nodeType === 3
-      && element.textContent === (texts[entry.nodeId] ?? entry.originalDecoded)) mapped.set(element, entry);
+    if (element.namespaceURI !== html.NS.HTML || element.localName !== entry.tag) continue;
+    const expected = texts[entry.nodeId] ?? entry.originalDecoded;
+    // Empty Text nodes disappear during snapshot serialization. Recreate one
+    // only for a unique original marker whose confirmed value is also empty.
+    if (expected === '' && element.childNodes.length === 0) element.appendChild(doc.createTextNode(''));
+    if (element.childNodes.length === 1 && element.firstChild?.nodeType === 3
+      && element.textContent === expected) mapped.set(element, entry);
   }
   return mapped;
 }
